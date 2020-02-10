@@ -1,0 +1,115 @@
+<html>
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+
+    <title>CheckClient GUI</title>
+    <!-- <script type="text/javascript" src="node_modules/jquery/src/jquery.js"></script>
+    <script type="text/javascript" src="node_modules/datatables/media/js/jquery.dataTables.js"></script> -->
+
+
+    <!-- <script type="text/javascript" src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script> -->
+
+
+    <!-- <script type="text/javascript"
+        src="http://cdn.datatables.net/plug-ins/28e7751dbec/integration/jqueryui/dataTables.jqueryui.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" /> -->
+
+    <link rel="stylesheet" href="node_modules/datatables.net-dt/css/jquery.dataTables.css" />
+
+
+
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foundation for Sites</title>
+    <link rel="stylesheet" href="css/foundation.css">
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="css/tabs.css">
+    <link rel="stylesheet" href="css/loader.css">
+    <link rel="stylesheet" href="css/detailbutton.css">
+</head>
+
+<body bgcolor=''>
+    <!-- <table id="table" class="display" width="100%"></table> -->
+    <!-- Tab links -->
+    <p></p>
+    <div>
+        <div class=" grid-y grid-padding-y">
+            <div class="grid-x grid-padding-x">
+                <div class="large-2 medium-2 cell">
+                    <label>Kind</label>
+                    <select id="kind">
+                        <option value="kind-all">All</option>
+                        <option value="lang">Lang</option>
+                        <option value="drone">Drone</option>
+                        <option value="sub">Submodule</option>
+                        <option value="file">File</option>
+                    </select>
+                </div>
+                <div class="large-2 medium-2 cell">
+                    <label id='orgTitle'>ORGs.</label>
+                    <select id="org">
+                        <option value="org-all">All</option>
+                        <option value="fish">FISH</option>
+                        <option value="board">BOARD</option>
+                        <option value="slot">SLOT</option>
+                    </select>
+                </div>
+                <div class="large-3 medium-3 cell">
+                    <div class="grid-x">
+                        <label>Game ID (Repo.)</label>
+                        <div class="input-group">
+                            <input id='gameID' type="number" value="" placeholder="Game ID" class="input-group-field">
+                        </div>
+                    </div>
+                </div>
+                <div class="large-3 medium-3 cell">
+                    <div class="grid-x">
+                        <label>Branch、tag(last tag)、Tag version(ex:v1.0.0) </label>
+                        <div class="input-group">
+                            <input id='branch' type="text" value="develop" placeholder="develop、tag(最新tag)"
+                                class="input-group-field">
+                        </div>
+                    </div>
+                </div>
+                <div class="large-1 medium-1 cell">
+                    <div class="grid-y">
+                        <p></p>
+                        <div>
+                            <a id="btnCheck" class="button" style="width: 120px;">立即搜尋</a>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="large-1 medium-1 cell">
+                    <div class="grid-y">
+                        <p></p>
+                        <div>
+                            <a id="btnDisplay" class="button" style="width: 120px;">暫存搜尋</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div>
+        <h6 id="message" style="color:orangered;" align="center">good day !!!</h6>
+    </div>
+    <div class="tab">
+        <button id="tabLangs" class="tablinks">Langs</button>
+        <button id="tabDrone" class="tablinks">Drone</button>
+        <button id="tabSub" class="tablinks">Submodule</button>
+        <button id="tabFile" class="tablinks">File</button>
+    </div>
+    <div style="margin-top:1rem">
+        <div id='loader' align="center">
+            <div class="loader"></div>
+        </div>
+
+        <script type="text/javascript" src="js/main.js"></script>
+        <div style="margin-top:1rem">
+
+</body>
+
+</html>
