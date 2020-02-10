@@ -4,25 +4,12 @@
     <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 
     <title>CheckClient GUI</title>
-    <!-- <script type="text/javascript" src="node_modules/jquery/src/jquery.js"></script>
-    <script type="text/javascript" src="node_modules/datatables/media/js/jquery.dataTables.js"></script> -->
-
-
-    <!-- <script type="text/javascript" src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script> -->
-
-
-    <!-- <script type="text/javascript"
-        src="http://cdn.datatables.net/plug-ins/28e7751dbec/integration/jqueryui/dataTables.jqueryui.js"></script>
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css" /> -->
-
-    <link rel="stylesheet" href="node_modules/datatables.net-dt/css/jquery.dataTables.css" />
-
-
 
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Foundation for Sites</title>
+    <link rel="stylesheet" href="css/jquery.dataTables.css" />
     <link rel="stylesheet" href="css/foundation.css">
     <link rel="stylesheet" href="css/app.css">
     <link rel="stylesheet" href="css/tabs.css">
@@ -68,7 +55,7 @@
                     <div class="grid-x">
                         <label>Branch、tag(last tag)、Tag version(ex:v1.0.0) </label>
                         <div class="input-group">
-                            <input id='branch' type="text" value="develop" placeholder="develop、tag(最新tag)"
+                            <input id='branch' type="text" value="tag" placeholder="develop、tag(最新tag)"
                                 class="input-group-field">
                         </div>
                     </div>
@@ -94,7 +81,7 @@
         </div>
     </div>
     <div>
-        <h6 id="message" style="color:orangered;" align="center">good day !!!</h6>
+        <h6 id="message" style="color:green;" align="center">good day !!!</h6>
     </div>
     <div class="tab">
         <button id="tabLangs" class="tablinks">Langs</button>
