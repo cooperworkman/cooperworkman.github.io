@@ -87,6 +87,59 @@ canvas { display: block; }
   color: #fff;
 }
 
+/* Boss HP Bar */
+#bossHpBar {
+  position: fixed; top: 50px; left: 50%; transform: translateX(-50%);
+  width: 500px; max-width: 80vw; z-index: 250; display: none;
+  text-align: center;
+}
+#bossHpBar .boss-name {
+  color: #ff4444; font-size: 18px; font-weight: bold; letter-spacing: 4px;
+  text-shadow: 0 0 10px #ff0000, 0 0 20px #990000;
+  margin-bottom: 6px;
+}
+#bossHpBar .bar-bg {
+  width: 100%; height: 20px; background: rgba(0,0,0,0.7);
+  border: 2px solid #ff4444; border-radius: 10px; overflow: hidden;
+  box-shadow: 0 0 15px rgba(255,0,0,0.3);
+}
+#bossHpBar .bar-fill {
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, #ff2222, #ff6644, #ff2222);
+  background-size: 200% 100%;
+  animation: bossBarPulse 2s ease-in-out infinite;
+  border-radius: 8px;
+}
+@keyframes bossBarPulse { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+#bossHpBar .bar-text {
+  color: #fff; font-size: 11px; margin-top: 4px; opacity: 0.7;
+}
+
+/* Victory Screen */
+#victoryScreen {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.85); z-index: 500; display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+}
+#victoryScreen h1 {
+  font-size: 72px; color: #ffd700; letter-spacing: 10px;
+  text-shadow: 0 0 30px #ffd700, 0 0 60px #ff8c00, 0 0 90px #ff4500;
+  animation: victoryGlow 1.5s ease-in-out infinite alternate;
+  margin-bottom: 20px;
+}
+@keyframes victoryGlow {
+  from { text-shadow: 0 0 30px #ffd700, 0 0 60px #ff8c00; transform: scale(1); }
+  to { text-shadow: 0 0 50px #ffd700, 0 0 80px #ff8c00, 0 0 120px #ff4500; transform: scale(1.05); }
+}
+#victoryScreen .victory-sub {
+  color: #fff; font-size: 20px; letter-spacing: 3px; margin-bottom: 10px;
+  opacity: 0.9;
+}
+#victoryScreen .victory-stats {
+  color: #c0b8e8; font-size: 14px; letter-spacing: 2px; margin-bottom: 40px;
+  opacity: 0.7;
+}
+
 /* HUD */
 #hud {
   position: fixed; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 100;
@@ -303,6 +356,21 @@ canvas { display: block; }
   <div class="controls-hint">WASD Move &bull; Space Jump &bull; Shift Dash &bull; LClick Attack &bull; RClick Block &bull; Mouse Look</div>
 </div>
 
+<div id="bossHpBar">
+  <div class="boss-name">KING SLIME</div>
+  <div class="bar-bg"><div class="bar-fill" id="bossHpFill"></div></div>
+  <div class="bar-text" id="bossHpText"></div>
+</div>
+
+<div id="victoryScreen">
+  <h1>VICTORY</h1>
+  <div class="victory-sub">THE KING SLIME HAS BEEN DEFEATED</div>
+  <div class="victory-stats" id="victoryStats"></div>
+  <div class="buttons">
+    <button class="deathBtn" onclick="returnToMenu()" style="pointer-events:auto;">Return to Menu</button>
+  </div>
+</div>
+
 <div id="deathScreen">
   <h1>YOU DIED</h1>
   <div class="buttons">
@@ -418,11 +486,20 @@ const GRAND_UNLOCK_KILLS = 500;
 let holyThunderCooldown = 0;
 const HOLY_THUNDER_COOLDOWN = 0.0375; // 4x faster
 const HOLY_THUNDER_DAMAGE = 5;
-const HOLY_THUNDER_RANGE = 8;
+const HOLY_THUNDER_RANGE = 5;
 let grandArrowCooldown = 0;
 const GRAND_ARROW_COOLDOWN = 1.0;
 const GRAND_ARROW_COUNT = 200;
 let holyThunderBolts = [];
+
+// Boss slime system (5000 kills)
+const BOSS_UNLOCK_KILLS = 3000;
+let bossSlime = null;
+let bossActive = false;
+let bossDefeated = false;
+const BOSS_MAX_HP = 5000;
+const BOSS_SCALE = 20;
+let bossMergeAnim = null; // {phase, timer, targets[], center}
 
 // ============ AUDIO SYSTEM ============
 let audioCtx = null;
@@ -806,8 +883,14 @@ const AudioSystem = {
     osc.stop(now + 0.2);
   },
 
+  _activeSfxCount: 0,
+  _maxConcurrentSfx: 10,
+
   playHit() {
     if (!audioCtx) return;
+    if (this._activeSfxCount >= this._maxConcurrentSfx) return;
+    this._activeSfxCount++;
+    setTimeout(() => { this._activeSfxCount--; }, 100);
     const now = audioCtx.currentTime;
 
     const osc = audioCtx.createOscillator();
@@ -842,6 +925,9 @@ const AudioSystem = {
 
   playKill() {
     if (!audioCtx) return;
+    if (this._activeSfxCount >= this._maxConcurrentSfx) return;
+    this._activeSfxCount++;
+    setTimeout(() => { this._activeSfxCount--; }, 150);
     const now = audioCtx.currentTime;
 
     const osc1 = audioCtx.createOscillator();
@@ -1027,6 +1113,8 @@ function startGame(gender) {
   buildPlayerModel();
   document.getElementById('titleScreen').style.display = 'none';
   document.getElementById('deathScreen').style.display = 'none';
+  document.getElementById('victoryScreen').style.display = 'none';
+  document.getElementById('bossHpBar').style.display = 'none';
   document.getElementById('hud').style.display = 'block';
   document.getElementById('crosshair').style.display = 'block';
   document.getElementById('charLabel').textContent = gender === 'male' ? 'HERO' : 'HEROINE';
@@ -1071,6 +1159,7 @@ function retryGame() {
     const ny = getTerrainHeight(nx, nz);
     slime.position.set(nx, ny, nz);
     slime.scale.set(1, 1, 1);
+    slime.visible = true;
     slime.userData.hp = slime.userData.maxHp;
     slime.userData.alive = true;
     slime.userData.hitFlash = 0;
@@ -1099,9 +1188,18 @@ function retryGame() {
   grandArrowCooldown = 0;
   holyThunderBolts.forEach(tb => scene.remove(tb.group));
   holyThunderBolts = [];
+  // Reset boss
+  if (bossSlime) { scene.remove(bossSlime); bossSlime = null; }
+  bossActive = false;
+  bossDefeated = false;
+  bossMergeAnim = null;
+  document.getElementById('bossHpBar').style.display = 'none';
+  document.getElementById('victoryScreen').style.display = 'none';
   // Reset mobile joystick ATK label
   const knob = document.getElementById('joystickKnob');
   if (knob) knob.classList.remove('auto-mode');
+  // Make slimes visible again
+  slimes.forEach(s => { s.visible = true; });
   // Now start
   startGame(playerGender);
 }
@@ -1153,6 +1251,7 @@ function returnToMenu() {
     const ny = getTerrainHeight(nx, nz);
     slime.position.set(nx, ny, nz);
     slime.scale.set(1, 1, 1);
+    slime.visible = true;
     slime.userData.hp = slime.userData.maxHp;
     slime.userData.alive = true;
     slime.userData.hitFlash = 0;
@@ -1179,6 +1278,13 @@ function returnToMenu() {
   grandArrowCooldown = 0;
   holyThunderBolts.forEach(tb => scene.remove(tb.group));
   holyThunderBolts = [];
+  // Reset boss
+  if (bossSlime) { scene.remove(bossSlime); bossSlime = null; }
+  bossActive = false;
+  bossDefeated = false;
+  bossMergeAnim = null;
+  document.getElementById('bossHpBar').style.display = 'none';
+  document.getElementById('victoryScreen').style.display = 'none';
   // Reset mobile joystick ATK label
   const knob2 = document.getElementById('joystickKnob');
   if (knob2) knob2.classList.remove('auto-mode');
@@ -2926,6 +3032,10 @@ function damageSlime(slime, amount, comboStep) {
     if (slimesDefeated >= GRAND_UNLOCK_KILLS && isSage && !isGrand) {
       unlockGrand();
     }
+    // Check boss spawn
+    if (slimesDefeated >= BOSS_UNLOCK_KILLS && isGrand && !bossActive && !bossDefeated) {
+      spawnBossSlime();
+    }
   }
 }
 
@@ -3239,7 +3349,7 @@ function updateArrows(dt) {
     // Homing toward target
     if (arrow.target && arrow.target.userData.alive) {
       const targetPos = arrow.target.position.clone();
-      targetPos.y += 0.5; // aim at slime center
+      targetPos.y += (arrow.target.userData.isBoss ? BOSS_SCALE * 0.3 : 0.5); // aim at center
       const toTarget = new THREE.Vector3().subVectors(targetPos, arrow.mesh.position);
       const dist = toTarget.length();
       toTarget.normalize();
@@ -3251,8 +3361,13 @@ function updateArrows(dt) {
       arrow.velocity.copy(newDir.multiplyScalar(ARROW_SPEED));
 
       // Check hit
-      if (dist < 1.0) {
-        damageSlime(arrow.target, ARROW_DAMAGE, 1);
+      const hitDist = (arrow.target.userData && arrow.target.userData.isBoss) ? BOSS_SCALE * 0.4 : 1.0;
+      if (dist < hitDist) {
+        if (arrow.target.userData && arrow.target.userData.isBoss) {
+          damageBoss(1);
+        } else {
+          damageSlime(arrow.target, ARROW_DAMAGE, 1);
+        }
         arrow.hasHit = true;
 
         // Hit particles
@@ -3268,14 +3383,21 @@ function updateArrows(dt) {
       // Lost target or target dead - find new one
       let newTarget = null;
       let minDist = 30;
-      slimes.forEach(slime => {
-        if (!slime.userData.alive) return;
-        const d = arrow.mesh.position.distanceTo(slime.position);
-        if (d < minDist) {
-          minDist = d;
-          newTarget = slime;
-        }
-      });
+      // Check boss first
+      if (bossActive && bossSlime && bossSlime.userData.alive) {
+        const bd = arrow.mesh.position.distanceTo(bossSlime.position);
+        if (bd < 60) { newTarget = bossSlime; minDist = bd; }
+      }
+      if (!newTarget) {
+        slimes.forEach(slime => {
+          if (!slime.userData.alive) return;
+          const d = arrow.mesh.position.distanceTo(slime.position);
+          if (d < minDist) {
+            minDist = d;
+            newTarget = slime;
+          }
+        });
+      }
       arrow.target = newTarget;
     }
 
@@ -3302,9 +3424,16 @@ function updateGrandAbilities(dt) {
     if (holyThunderCooldown <= 0) {
       holyThunderCooldown = HOLY_THUNDER_COOLDOWN;
 
-      // Find a random alive slime within range
+      // Find a random alive slime or boss within range
       let target = null;
       let candidates = [];
+      // Boss is always top priority
+      if (bossActive && bossSlime && bossSlime.userData.alive) {
+        const bd = player.position.distanceTo(bossSlime.position);
+        if (bd < HOLY_THUNDER_RANGE + BOSS_SCALE * 0.5) {
+          candidates.push(bossSlime);
+        }
+      }
       slimes.forEach(slime => {
         if (!slime.userData.alive) return;
         const dist = player.position.distanceTo(slime.position);
@@ -3313,53 +3442,72 @@ function updateGrandAbilities(dt) {
         }
       });
       if (candidates.length > 0) {
-        target = candidates[Math.floor(Math.random() * candidates.length)];
+        // Spawn 3~5 bolts with staggered delays like real thunder
+        const boltCount = 5 + Math.floor(Math.random() * 6); // 5~10
+        for (let b = 0; b < boltCount; b++) {
+          const delay = b === 0 ? 0 : Math.random() * 150 + 30; // first instant, rest 30~180ms
+          const tIdx = Math.floor(Math.random() * candidates.length);
+          setTimeout(() => {
+            if (!gameStarted || isDead) return;
+            const t = candidates[tIdx];
+            if (!t || !t.userData) return;
 
-        // Spawn holy thunder bolt from sky - massive
-        const boltGroup = new THREE.Group();
+            const boltGroup = new THREE.Group();
+            const spread = (t.userData && t.userData.isBoss) ? 16 : 4;
+            const offsetX = (Math.random() - 0.5) * spread;
+            const offsetZ = (Math.random() - 0.5) * spread;
+            const tx = t.position.x + offsetX;
+            const tz = t.position.z + offsetZ;
 
-        // Main bolt - very thick golden lightning
-        const boltGeo = new THREE.BoxGeometry(0.5, 20, 0.5);
-        const boltMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
-        const bolt = new THREE.Mesh(boltGeo, boltMat);
-        bolt.position.set(target.position.x, target.position.y + 10, target.position.z);
-        boltGroup.add(bolt);
+            // Main bolt
+            const boltGeo = new THREE.BoxGeometry(0.5, 20, 0.5);
+            const boltMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
+            const bolt = new THREE.Mesh(boltGeo, boltMat);
+            bolt.position.set(tx, t.position.y + 10, tz);
+            boltGroup.add(bolt);
 
-        // Outer glow - wide
-        const glowGeo = new THREE.BoxGeometry(1.5, 20, 1.5);
-        const glowMat = new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.35 });
-        const glow = new THREE.Mesh(glowGeo, glowMat);
-        glow.position.set(target.position.x, target.position.y + 10, target.position.z);
-        boltGroup.add(glow);
+            // Outer glow
+            const glowGeo = new THREE.BoxGeometry(1.5, 20, 1.5);
+            const glowMat = new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.35 });
+            const glow = new THREE.Mesh(glowGeo, glowMat);
+            glow.position.set(tx, t.position.y + 10, tz);
+            boltGroup.add(glow);
 
-        // Large impact flash on ground
-        const flashGeo = new THREE.BoxGeometry(8.0, 0.15, 8.0);
-        const flashMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 });
-        const flash = new THREE.Mesh(flashGeo, flashMat);
-        flash.position.set(target.position.x, target.position.y + 0.1, target.position.z);
-        boltGroup.add(flash);
+            // Impact flash
+            const flashGeo = new THREE.BoxGeometry(8.0, 0.15, 8.0);
+            const flashMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 });
+            const flash = new THREE.Mesh(flashGeo, flashMat);
+            flash.position.set(tx, t.position.y + 0.1, tz);
+            boltGroup.add(flash);
 
-        // Secondary outer ring
-        const ringGeo = new THREE.BoxGeometry(12.0, 0.08, 12.0);
-        const ringMat = new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.3 });
-        const ring = new THREE.Mesh(ringGeo, ringMat);
-        ring.position.set(target.position.x, target.position.y + 0.05, target.position.z);
-        boltGroup.add(ring);
+            // Outer ring
+            const ringGeo = new THREE.BoxGeometry(12.0, 0.08, 12.0);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.3 });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.position.set(tx, t.position.y + 0.05, tz);
+            boltGroup.add(ring);
 
-        scene.add(boltGroup);
-        holyThunderBolts.push({ group: boltGroup, life: 0.2, maxLife: 0.2 });
+            scene.add(boltGroup);
+            holyThunderBolts.push({ group: boltGroup, life: 0.2, maxLife: 0.2 });
 
-        // Damage target and nearby slimes (large AoE)
-        const aoeRange = 8;
-        slimes.forEach(slime => {
-          if (!slime.userData.alive) return;
-          const d = slime.position.distanceTo(target.position);
-          if (d < aoeRange) {
-            damageSlime(slime, HOLY_THUNDER_DAMAGE, 1);
-          }
-        });
-
-        screenShakeIntensity = Math.max(screenShakeIntensity, 0.06);
+            // AoE damage per bolt
+            const aoeRange = 8;
+            slimes.forEach(slime => {
+              if (!slime.userData.alive) return;
+              const d = slime.position.distanceTo(t.position);
+              if (d < aoeRange) {
+                damageSlime(slime, HOLY_THUNDER_DAMAGE, 1);
+              }
+            });
+            if (bossActive && bossSlime && bossSlime.userData.alive) {
+              const bd = bossSlime.position.distanceTo(t.position);
+              if (bd < aoeRange + BOSS_SCALE * 0.4) {
+                damageBoss(1);
+              }
+            }
+            screenShakeIntensity = Math.max(screenShakeIntensity, 0.06);
+          }, delay);
+        }
       }
     }
 
@@ -3384,8 +3532,12 @@ function updateGrandAbilities(dt) {
       grandArrowCooldown = GRAND_ARROW_COOLDOWN;
 
       const arrowCount = GRAND_ARROW_COUNT;
-      // Find targets
+      // Find targets (including boss)
       const targets = [];
+      if (bossActive && bossSlime && bossSlime.userData.alive) {
+        const bd = player.position.distanceTo(bossSlime.position);
+        if (bd < 80) targets.push({ slime: bossSlime, dist: bd });
+      }
       slimes.forEach(slime => {
         if (!slime.userData.alive) return;
         const dist = player.position.distanceTo(slime.position);
@@ -3464,6 +3616,244 @@ function updateGrandAbilities(dt) {
     }
     if (meteor.life <= 0) { scene.remove(meteor.mesh); meteorList.splice(i, 1); }
   }
+}
+
+// ============ BOSS SLIME SYSTEM ============
+function spawnBossSlime() {
+  if (bossActive || bossDefeated) return;
+  bossActive = true;
+
+  // Show dramatic toast
+  showUpgradeToast('KING SLIME AWAKENS', 'All slimes merge into the ultimate enemy!', true);
+
+  // Calculate center of all alive slimes
+  let cx = 0, cz = 0, count = 0;
+  slimes.forEach(s => {
+    if (s.userData.alive) { cx += s.position.x; cz += s.position.z; count++; }
+  });
+  if (count > 0) { cx /= count; cz /= count; }
+  else { cx = player.position.x + 20; cz = player.position.z + 20; }
+
+  // Hide all normal slimes
+  slimes.forEach(s => {
+    s.userData.alive = false;
+    s.userData.deathTimer = 0;
+    s.scale.set(0, 0, 0);
+    s.visible = false;
+  });
+
+  // Create boss slime - giant version
+  const boss = new THREE.Group();
+  const cy = getTerrainHeight(cx, cz);
+
+  // Body - massive
+  const bodyGeo = new THREE.SphereGeometry(0.6, 16, 14);
+  const bodyMat = new THREE.MeshPhongMaterial({
+    color: 0xcc2255,
+    transparent: true,
+    opacity: 0.9,
+    shininess: 150,
+    specular: 0xffffff,
+    emissive: 0x661133
+  });
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.scale.set(0.7, 0.525, 0.7);
+  body.position.y = 0.413;
+  body.castShadow = true;
+  boss.add(body);
+
+  // Inner glow - ominous
+  const innerGeo = new THREE.SphereGeometry(0.35, 8, 8);
+  const innerMat = new THREE.MeshBasicMaterial({
+    color: 0xff4466,
+    transparent: true,
+    opacity: 0.5
+  });
+  const inner = new THREE.Mesh(innerGeo, innerMat);
+  inner.scale.set(0.7, 0.7, 0.7);
+  inner.position.y = 0.455;
+  boss.add(inner);
+
+  // Evil eyes - bigger, red
+  const eyeGeo = new THREE.SphereGeometry(0.15, 8, 8);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+  leftEye.position.set(-0.18, 0.42, 0.29);
+  boss.add(leftEye);
+  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+  rightEye.position.set(0.18, 0.42, 0.29);
+  boss.add(rightEye);
+
+  // Angry mouth
+  const mouthGeo = new THREE.BoxGeometry(0.25, 0.06, 0.05);
+  const mouthMat = new THREE.MeshBasicMaterial({ color: 0x220000 });
+  const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+  mouth.position.set(0, 0.28, 0.35);
+  boss.add(mouth);
+
+  // Crown on top
+  const crownMat = new THREE.MeshPhongMaterial({ color: 0xffd700, emissive: 0x886600 });
+  for (let i = 0; i < 5; i++) {
+    const angle = (i / 5) * Math.PI * 2;
+    const spike = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.08), crownMat);
+    spike.position.set(Math.sin(angle) * 0.25, 0.75, Math.cos(angle) * 0.25);
+    boss.add(spike);
+  }
+  const crownBase = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.08, 0.6), crownMat);
+  crownBase.position.y = 0.66;
+  boss.add(crownBase);
+
+  boss.position.set(cx, cy, cz);
+  boss.scale.set(BOSS_SCALE, BOSS_SCALE, BOSS_SCALE);
+
+  boss.userData = {
+    hp: BOSS_MAX_HP,
+    maxHp: BOSS_MAX_HP,
+    alive: true,
+    hitFlash: 0,
+    bouncePhase: 0,
+    speed: 1.2,
+    knockbackVel: new THREE.Vector3(0, 0, 0),
+    isBoss: true
+  };
+
+  scene.add(boss);
+  bossSlime = boss;
+
+  // Show boss HP bar
+  document.getElementById('bossHpBar').style.display = 'block';
+  updateBossHpBar();
+
+  screenShakeIntensity = 2.0;
+}
+
+function updateBossHpBar() {
+  if (!bossSlime) return;
+  const pct = Math.max(0, bossSlime.userData.hp / bossSlime.userData.maxHp * 100);
+  document.getElementById('bossHpFill').style.width = pct + '%';
+  document.getElementById('bossHpText').textContent =
+    Math.ceil(bossSlime.userData.hp) + ' / ' + bossSlime.userData.maxHp;
+}
+
+function damageBoss(amount) {
+  if (!bossSlime || !bossSlime.userData.alive) return;
+  bossSlime.userData.hp -= amount;
+  bossSlime.userData.hitFlash = 0.15;
+  updateBossHpBar();
+
+  AudioSystem.playHit();
+  screenShakeIntensity = Math.max(screenShakeIntensity, 0.15);
+
+  // Spawn particles at boss
+  const dir = new THREE.Vector3().subVectors(bossSlime.position, player.position).normalize();
+  spawnHitParticles(bossSlime.position.clone().add(new THREE.Vector3(0, 5, 0)), dir);
+
+  if (bossSlime.userData.hp <= 0) {
+    bossSlime.userData.alive = false;
+    bossDefeated = true;
+    bossActive = false;
+
+    // Boss death animation - big explosion
+    screenShakeIntensity = 5.0;
+    for (let i = 0; i < 50; i++) {
+      const pDir = new THREE.Vector3(Math.random()-0.5, Math.random(), Math.random()-0.5).normalize();
+      spawnHitParticles(bossSlime.position.clone().add(new THREE.Vector3(
+        (Math.random()-0.5)*10, Math.random()*10, (Math.random()-0.5)*10
+      )), pDir);
+    }
+
+    // Remove boss from scene after a delay
+    setTimeout(() => {
+      if (bossSlime) {
+        scene.remove(bossSlime);
+        bossSlime = null;
+      }
+      document.getElementById('bossHpBar').style.display = 'none';
+      showVictoryScreen();
+    }, 1500);
+
+    // Shrink boss
+    const shrinkInterval = setInterval(() => {
+      if (bossSlime) {
+        bossSlime.scale.multiplyScalar(0.92);
+        bossSlime.position.y += 0.3;
+      } else {
+        clearInterval(shrinkInterval);
+      }
+    }, 50);
+  }
+}
+
+function showVictoryScreen() {
+  document.getElementById('victoryStats').textContent =
+    'Total Slimes Defeated: ' + slimesDefeated;
+  document.getElementById('victoryScreen').style.display = 'flex';
+  gameStarted = false;
+
+  AudioSystem.stopAllMusic();
+}
+
+function updateBossSlime(dt) {
+  if (!bossActive || !bossSlime || !bossSlime.userData.alive) return;
+
+  // Hit flash
+  if (bossSlime.userData.hitFlash > 0) {
+    bossSlime.userData.hitFlash -= dt;
+    bossSlime.children[0].material.emissive.setHex(0xffffff);
+  } else {
+    bossSlime.children[0].material.emissive.setHex(0x661133);
+  }
+
+  // Bounce animation
+  bossSlime.userData.bouncePhase += dt * 1.5;
+  const bounce = Math.abs(Math.sin(bossSlime.userData.bouncePhase));
+  const sy = BOSS_SCALE * (1 - bounce * 0.08);
+  const sxz = BOSS_SCALE * (1 + bounce * 0.04);
+  bossSlime.scale.set(sxz, sy, sxz);
+
+  // Chase player slowly
+  const distToPlayer = bossSlime.position.distanceTo(player.position);
+  const dir = new THREE.Vector3().subVectors(player.position, bossSlime.position).normalize();
+  const collisionDist = BOSS_SCALE * 0.5;
+
+  if (distToPlayer > collisionDist * 0.8) {
+    bossSlime.position.x += dir.x * bossSlime.userData.speed * dt;
+    bossSlime.position.z += dir.z * bossSlime.userData.speed * dt;
+  }
+  bossSlime.position.y = getTerrainHeight(bossSlime.position.x, bossSlime.position.z);
+  bossSlime.lookAt(player.position.x, bossSlime.position.y, player.position.z);
+
+  // Damage player on contact
+  if (distToPlayer < collisionDist && playerInvincible <= 0) {
+    const dmg = isBlocking ? 3 : 10;
+    playerHP -= dmg;
+    playerInvincible = 0.8;
+    updateHPBar();
+    screenShakeIntensity = Math.max(screenShakeIntensity, 0.5);
+    document.getElementById('damageFlash').style.opacity = '0.4';
+    setTimeout(() => { document.getElementById('damageFlash').style.opacity = '0'; }, 200);
+
+    // Push player away
+    const pushDir = new THREE.Vector3().subVectors(player.position, bossSlime.position).normalize();
+    player.position.x += pushDir.x * 8;
+    player.position.z += pushDir.z * 8;
+
+    if (playerHP <= 0) {
+      playerHP = 0;
+      isDead = true;
+      updateHPBar();
+      document.getElementById('deathScreen').style.display = 'flex';
+      AudioSystem.stopAllMusic();
+    }
+  }
+
+  // Apply knockback
+  if (bossSlime.userData.knockbackVel.length() > 0.01) {
+    bossSlime.position.x += bossSlime.userData.knockbackVel.x * dt;
+    bossSlime.position.z += bossSlime.userData.knockbackVel.z * dt;
+    bossSlime.userData.knockbackVel.multiplyScalar(0.9);
+  }
+
 }
 
 function updateSageAbilities(dt) {
@@ -3842,6 +4232,8 @@ function spawnLightningBolt(from, to) {
 }
 
 function respawnSlime(slime) {
+  // No respawning during boss fight
+  if (bossActive || bossDefeated) return;
   let nx, nz;
   do {
     nx = (Math.random() - 0.5) * 140;
@@ -3890,6 +4282,8 @@ function getNeighboringSlimes(slime) {
 }
 
 function updateSlimes(dt) {
+  // Skip normal slime updates during boss fight
+  if (bossActive) return;
   // Rebuild spatial hash every frame
   buildSpatialHash();
 
@@ -4108,6 +4502,8 @@ function animate() {
     updateArrows(actualDt);
     updateSageAbilities(actualDt);
     updateGrandAbilities(actualDt);
+    updateBossSlime(actualDt);
+    if (bossActive && bossSlime) updateBossHpBar();
 
     // Always update particles and combo
     updateParticles(dt);
