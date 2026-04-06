@@ -1,0 +1,4100 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLAUDLE - Warriors-like</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
+canvas { display: block; }
+
+/* Title Screen */
+#titleScreen {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(135deg, #0a0a2e 0%, #1a0a3e 30%, #2d1b69 60%, #0d2137 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 1000; cursor: default;
+}
+#titleScreen .stars {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: radial-gradient(2px 2px at 20px 30px, #fff, transparent),
+              radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+              radial-gradient(1px 1px at 90px 40px, #fff, transparent),
+              radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.6), transparent),
+              radial-gradient(1px 1px at 200px 60px, #fff, transparent);
+  background-size: 250px 180px;
+  animation: twinkle 4s ease-in-out infinite alternate;
+}
+@keyframes twinkle { from { opacity: 0.5; } to { opacity: 1; } }
+#titleScreen h1 {
+  font-size: 72px; color: #fff; text-shadow: 0 0 30px #7b68ee, 0 0 60px #4a3aaa;
+  letter-spacing: 12px; margin-bottom: 10px; z-index: 1;
+  font-weight: 900;
+}
+#titleScreen .subtitle {
+  font-size: 18px; color: #a8a0d0; letter-spacing: 6px; margin-bottom: 60px; z-index: 1;
+}
+.charSelect { z-index: 1; text-align: center; }
+.charSelect h2 { color: #c0b8e8; font-size: 22px; margin-bottom: 25px; letter-spacing: 3px; }
+.charBtns { display: flex; gap: 30px; justify-content: center; }
+.charBtn {
+  width: 180px; height: 220px; border: 2px solid rgba(123,104,238,0.4);
+  border-radius: 16px; background: rgba(255,255,255,0.05);
+  cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 15px;
+  backdrop-filter: blur(10px);
+}
+.charBtn:hover {
+  border-color: #7b68ee; background: rgba(123,104,238,0.15);
+  transform: translateY(-5px); box-shadow: 0 10px 30px rgba(123,104,238,0.3);
+}
+.charBtn .icon { font-size: 80px; }
+.charBtn .label { color: #c0b8e8; font-size: 16px; letter-spacing: 2px; }
+.controls-hint {
+  position: absolute; bottom: 30px; color: rgba(168,160,208,0.6);
+  font-size: 13px; letter-spacing: 2px; z-index: 1;
+}
+
+/* Death Screen */
+#deathScreen {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.8); z-index: 300; display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+}
+#deathScreen h1 {
+  font-size: 80px; color: #ff4444; text-shadow: 0 0 30px #ff0000, 0 0 60px #cc0000;
+  letter-spacing: 8px; margin-bottom: 40px;
+  animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+#deathScreen .buttons {
+  display: flex; gap: 40px; margin-bottom: 20px;
+}
+.deathBtn {
+  padding: 15px 40px; font-size: 18px; letter-spacing: 2px;
+  border: 2px solid #7b68ee; background: rgba(123,104,238,0.2);
+  color: #c0b8e8; cursor: pointer; border-radius: 8px;
+  transition: all 0.3s; backdrop-filter: blur(10px);
+  text-transform: uppercase; font-weight: bold;
+}
+.deathBtn:hover {
+  border-color: #fff; background: rgba(123,104,238,0.4);
+  box-shadow: 0 0 20px rgba(123,104,238,0.6);
+  color: #fff;
+}
+
+/* HUD */
+#hud {
+  position: fixed; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 100;
+  display: none;
+}
+#hpBar {
+  position: absolute; top: 20px; left: 20px;
+  width: 250px; height: 28px; background: rgba(0,0,0,0.6);
+  border: 2px solid #555; border-radius: 14px; overflow: hidden;
+}
+#hpFill {
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, #2ecc71, #27ae60);
+  border-radius: 12px; transition: width 0.3s;
+}
+#hpText {
+  position: absolute; top: 22px; left: 30px;
+  color: #fff; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 2px #000;
+  line-height: 24px;
+}
+#charLabel {
+  position: absolute; top: 52px; left: 20px;
+  color: #c0b8e8; font-size: 14px; letter-spacing: 2px;
+  text-shadow: 1px 1px 3px #000;
+}
+#instructions {
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  color: rgba(255,255,255,0.5); font-size: 12px; text-align: center;
+  letter-spacing: 1px; line-height: 1.8;
+}
+#perfStats {
+  position: fixed; bottom: 12px; left: 12px; z-index: 200;
+  background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px; padding: 8px 12px; pointer-events: none;
+  font-family: 'Courier New', monospace; font-size: 11px;
+  color: #8f8; line-height: 1.6; display: none; min-width: 180px;
+}
+#crosshair {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: 6px; height: 6px; border: 1.5px solid rgba(255,255,255,0.3);
+  border-radius: 50%; z-index: 101; display: none; pointer-events: none;
+}
+#damageFlash {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(255,0,0,0.3); z-index: 99; display: none; pointer-events: none;
+}
+#demoComplete {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7); z-index: 200; display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+}
+#demoComplete h1 {
+  font-size: 56px; color: #ffd700; text-shadow: 0 0 30px #ffa500;
+  letter-spacing: 8px; margin-bottom: 20px;
+}
+#demoComplete p { color: #c0b8e8; font-size: 18px; letter-spacing: 3px; }
+#koCounter {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  font-size: 120px; font-weight: bold; color: #ffd700;
+  text-shadow: 0 0 30px #ffa500, 0 0 60px #ff6600;
+  z-index: 150; pointer-events: none; display: none;
+  animation: koFlash 0.6s ease-out;
+}
+@keyframes koFlash {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+  50% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+}
+
+#comboDisplay {
+  position: fixed; bottom: 15%; left: 50%; transform: translateX(-50%);
+  font-size: 80px; font-weight: 900; pointer-events: none; z-index: 150;
+  display: none; text-shadow: 0 0 20px rgba(0,0,0,0.8);
+  letter-spacing: 8px;
+}
+@keyframes comboBounce {
+  0% { transform: translateX(-50%) scale(0.3); opacity: 1; }
+  50% { transform: translateX(-50%) scale(1.1); opacity: 1; }
+  100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+@keyframes comboFadeOut {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.combo-1-9 { color: #ffffff; text-shadow: 0 0 10px #ffffff; }
+.combo-10-29 { color: #ffff00; text-shadow: 0 0 20px #ffff00; }
+.combo-30-49 { color: #ff8800; text-shadow: 0 0 20px #ff8800; }
+.combo-50-99 { color: #ff0000; text-shadow: 0 0 30px #ff0000, 0 0 60px #ff6600; }
+.combo-100-plus { color: #ffd700; text-shadow: 0 0 40px #ffa500, 0 0 80px #ff6600; }
+
+#koTotal {
+  position: absolute; top: 20px; right: 20px;
+  color: #ffd700; font-size: 28px; font-weight: bold;
+  text-shadow: 0 0 15px #ffa500;
+  letter-spacing: 2px;
+}
+#slimeCounter {
+  position: absolute; top: 60px; right: 20px;
+  color: #ffb8d0; font-size: 16px; text-shadow: 1px 1px 3px #000;
+  letter-spacing: 1px;
+}
+#comboDisplay {
+  position: absolute; top: 62px; left: 20px;
+  color: #ffd700; font-size: 18px; font-weight: bold;
+  letter-spacing: 2px; text-shadow: 0 0 8px #ffa500, 1px 1px 3px #000;
+  opacity: 0; transition: opacity 0.15s;
+}
+#comboDisplay.active { opacity: 1; }
+#menuBtn {
+  position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+  color: rgba(255,255,255,0.6); font-size: 14px; letter-spacing: 2px;
+  text-shadow: 1px 1px 3px #000; cursor: pointer; padding: 6px 20px;
+  border: 1px solid rgba(255,255,255,0.2); border-radius: 6px;
+  background: rgba(0,0,0,0.3); transition: all 0.2s; pointer-events: auto;
+}
+#menuBtn:hover {
+  color: #fff; border-color: rgba(255,255,255,0.5);
+  background: rgba(0,0,0,0.5);
+}
+#blockIndicator {
+  position: absolute; top: 85px; left: 20px;
+  color: #5bc0de; font-size: 14px; letter-spacing: 1px;
+  text-shadow: 1px 1px 3px #000; display: none;
+}
+#upgradeToast {
+  position: fixed; top: 40px; left: 50%; transform: translateX(-50%) translateY(-120px);
+  z-index: 500; pointer-events: none;
+  background: rgba(0,0,0,0.85); border: 2px solid #ffd700;
+  border-radius: 12px; padding: 16px 40px; text-align: center;
+  opacity: 0; transition: transform 0.5s ease, opacity 0.4s ease;
+}
+#upgradeToast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+#upgradeToast.hide {
+  transform: translateX(-50%) translateY(-120px);
+  opacity: 0;
+}
+#upgradeToast h1 {
+  font-size: 32px; color: #ffd700; margin: 0;
+  text-shadow: 0 0 20px #ff8800, 0 0 40px #ff4400;
+  letter-spacing: 4px;
+}
+#upgradeToast p {
+  font-size: 14px; color: #ffcc88; margin: 6px 0 0 0; letter-spacing: 2px;
+}
+#upgradeToast.grand { border-color: #fff; }
+#upgradeToast.grand h1 {
+  color: #fff; text-shadow: 0 0 20px #ffe066, 0 0 40px #fff;
+}
+#upgradeToast.grand p { color: #ffe088; }
+</style>
+</head>
+<body>
+
+<div id="titleScreen">
+  <div class="stars"></div>
+  <h1>CLAUDLE</h1>
+  <div class="subtitle">Warriors-like</div>
+  <div class="charSelect">
+    <h2>SELECT YOUR HERO</h2>
+    <div class="charBtns">
+      <div class="charBtn" onclick="startGame('male')">
+        <div class="icon">&#9876;</div>
+        <div class="label">MALE</div>
+      </div>
+      <div class="charBtn" onclick="startGame('female')">
+        <div class="icon">&#10025;</div>
+        <div class="label">FEMALE</div>
+      </div>
+    </div>
+  </div>
+  <div class="controls-hint">WASD Move &bull; Space Jump &bull; Shift Dash &bull; LClick Attack &bull; RClick Block &bull; Mouse Look</div>
+</div>
+
+<div id="deathScreen">
+  <h1>YOU DIED</h1>
+  <div class="buttons">
+    <button class="deathBtn" onclick="retryGame()" style="pointer-events:auto;">Retry</button>
+    <button class="deathBtn" onclick="returnToMenu()" style="pointer-events:auto;">Return to Menu</button>
+  </div>
+</div>
+
+<div id="hud">
+  <div id="hpBar"><div id="hpFill"></div></div>
+  <div id="hpText">HP 100/100</div>
+  <div id="charLabel"></div>
+  <div id="blockIndicator">BLOCKING</div>
+  <div id="koTotal">KO: 0</div>
+  <div id="slimeCounter"></div>
+  <div id="comboDisplay"></div>
+  <div id="menuBtn" onclick="returnToMenu()" style="pointer-events:auto;">ESC - MENU</div>
+  <div id="instructions">WASD - Move &bull; Space - Jump &bull; Shift - Dash &bull; Left Click - Attack &bull; Right Click - Block &bull; Mouse - Look &bull; ESC - Menu</div>
+</div>
+<div id="crosshair"></div>
+<div id="damageFlash"></div>
+<div id="upgradeToast"><h1></h1><p></p></div>
+<div id="perfStats"></div>
+<div id="koCounter"></div>
+<div id="demoComplete">
+  <h1>DEMO COMPLETE!</h1>
+  <p>All slimes defeated. The grasslands are safe... for now.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ============================================
+// CLAUDLE - Warriors-like Game
+// ============================================
+
+let scene, camera, renderer, clock;
+let player, playerMixer, playerActions = {};
+let slimes = [];
+let keys = {};
+let mouseX = 0, mouseY = 0;
+let cameraAngleX = Math.PI, cameraAngleY = 0.3;
+let cameraDist = 8;
+let isPointerLocked = false;
+let playerHP = 100, maxHP = 100;
+let isAttacking = false, attackTimer = 0;
+let isBlocking = false;
+let wasBlocking = false;
+let comboStep = 0;        // 0=none, 1=first slash, 2=second slash, 3=heavy thrust
+let comboWindow = 0;      // time left to chain next attack
+let comboQueued = false;   // player pressed attack during current swing
+const COMBO_DURATIONS = [0.2, 0.18, 0.3]; // faster attack durations
+const COMBO_DAMAGE = [1, 1, 2];             // damage per hit
+const LUNGE_SPEED = [5, 6, 9];              // forward lunge per combo step
+let swordQiList = [];                       // active sword qi projectiles
+let arrowList = [];                         // active homing arrows
+let arrowCooldown = 0;
+const ARROW_COOLDOWN = 0.35;
+const ARROW_SPEED = 25;
+const ARROW_TURN_SPEED = 8;
+const ARROW_DAMAGE = 1;
+const ARROW_LIFETIME = 3.0;
+let playerGender = 'male';
+let gameStarted = false;
+let totalSlimes = 1600;
+let slimesDefeated = 0;
+let playerVelocityY = 0;
+let isGrounded = true;
+let comboCounter = 0;
+let comboResetTimer = 3.0;
+let hitStopTimer = 0;
+let screenShakeIntensity = 0;
+let particlePool = [];
+let spatialHash = {};
+const SPATIAL_HASH_CELL_SIZE = 5;
+const PARTICLE_POOL_SIZE = 200;
+const GRAVITY = -20;
+const JUMP_FORCE = 8;
+const GROUND_Y = 0;
+let attackCooldown = 0;
+let playerInvincible = 0;
+let isDead = false;
+let dashCooldown = 0;
+const DASH_DURATION = 0.15;
+const DASH_SPEED = 25;
+const DASH_COOLDOWN = 0.8;
+
+// Sage system
+let isSage = false;
+let sageUnlockShown = false;
+let meteorList = [];
+let meteorCooldown = 0;
+const METEOR_COOLDOWN = 0.3;
+const METEOR_DAMAGE = 3;
+let lightningOrbs = [];
+const LIGHTNING_ORB_COUNT = 5;
+const LIGHTNING_ORB_DAMAGE = 1;
+let lightningOrbAngle = 0;
+let lightningAttackCooldown = 0;
+const LIGHTNING_ATTACK_COOLDOWN = 0.5;
+let sageAutoArrowCooldown = 0;
+const SAGE_AUTO_ARROW_COOLDOWN = 1.0;
+const SAGE_ARROW_COUNT = 20;
+const SAGE_UNLOCK_KILLS = 50;
+
+// Grand tier system (2nd evolution)
+let isGrand = false;
+let grandUnlockShown = false;
+const GRAND_UNLOCK_KILLS = 500;
+let holyThunderCooldown = 0;
+const HOLY_THUNDER_COOLDOWN = 0.0375; // 4x faster
+const HOLY_THUNDER_DAMAGE = 5;
+const HOLY_THUNDER_RANGE = 8;
+let grandArrowCooldown = 0;
+const GRAND_ARROW_COOLDOWN = 1.0;
+const GRAND_ARROW_COUNT = 200;
+let holyThunderBolts = [];
+
+// ============ AUDIO SYSTEM ============
+let audioCtx = null;
+let audioInitialized = false;
+let noiseBuffer = null;
+
+const AudioSystem = {
+  masterGain: null,
+  musicGain: null,
+  sfxGain: null,
+  titleMusicOscillators: [],
+  battleMusicOscillators: [],
+  musicTime: 0,
+  titleMusicSchedule: [],
+  battleMusicSchedule: [],
+  currentMusicTrack: null,
+
+  init() {
+    if (audioInitialized) return;
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    this.masterGain = audioCtx.createGain();
+    this.masterGain.gain.value = 1.0;
+    this.masterGain.connect(audioCtx.destination);
+
+    this.musicGain = audioCtx.createGain();
+    this.musicGain.gain.value = 0.15;
+    this.musicGain.connect(this.masterGain);
+
+    this.sfxGain = audioCtx.createGain();
+    this.sfxGain.gain.value = 0.3;
+    this.sfxGain.connect(this.masterGain);
+
+    this.createNoiseBuffer();
+    audioInitialized = true;
+  },
+
+  createNoiseBuffer() {
+    const bufferSize = audioCtx.sampleRate * 2;
+    const noiseAB = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseAB.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+    noiseBuffer = noiseAB;
+  },
+
+  playMenuHover() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.frequency.value = 800;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.1);
+  },
+
+  playMenuClick() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    osc.start(now);
+    osc.stop(now + 0.15);
+
+    const src = audioCtx.createBufferSource();
+    src.buffer = noiseBuffer;
+    const nGain = audioCtx.createGain();
+    src.connect(nGain);
+    nGain.connect(this.sfxGain);
+    nGain.gain.setValueAtTime(0.08, now);
+    nGain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+    src.start(now);
+    src.stop(now + 0.08);
+  },
+
+  playTitleMusic() {
+    if (!audioCtx) return;
+    this.stopAllMusic();
+    this.currentMusicTrack = 'title';
+    this.scheduleTitleMusicLoop();
+  },
+
+  scheduleTitleMusicLoop() {
+    if (this.currentMusicTrack !== 'title') return;
+    const now = audioCtx.currentTime;
+
+    // FF-style beautiful chord progression with arpeggios
+    // Am → F → C → G → Am → Em → F → G
+    const chords = [
+      { notes: [220, 261.63, 329.63], bass: 110 },    // Am
+      { notes: [174.61, 220, 261.63], bass: 87.31 },   // F
+      { notes: [261.63, 329.63, 392], bass: 130.81 },   // C
+      { notes: [196, 246.94, 293.66], bass: 98 },       // G
+      { notes: [220, 261.63, 329.63], bass: 110 },      // Am
+      { notes: [164.81, 196, 246.94], bass: 82.41 },    // Em
+      { notes: [174.61, 220, 261.63], bass: 87.31 },    // F
+      { notes: [196, 246.94, 392], bass: 98 },           // G
+    ];
+
+    const beatDuration = 0.857; // ~70 BPM
+    const chordDuration = beatDuration * 2;
+
+    let time = now;
+    chords.forEach((chord, ci) => {
+      // Sustained pad (very soft sine)
+      chord.notes.forEach(freq => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(this.musicGain);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, time);
+        gain.gain.linearRampToValueAtTime(0.04, time + 0.3);
+        gain.gain.setValueAtTime(0.04, time + chordDuration - 0.3);
+        gain.gain.linearRampToValueAtTime(0, time + chordDuration);
+        osc.start(time);
+        osc.stop(time + chordDuration + 0.1);
+      });
+
+      // Bass note (low sine)
+      const bassOsc = audioCtx.createOscillator();
+      const bassGain = audioCtx.createGain();
+      bassOsc.connect(bassGain);
+      bassGain.connect(this.musicGain);
+      bassOsc.type = 'sine';
+      bassOsc.frequency.value = chord.bass;
+      bassGain.gain.setValueAtTime(0, time);
+      bassGain.gain.linearRampToValueAtTime(0.06, time + 0.2);
+      bassGain.gain.setValueAtTime(0.06, time + chordDuration - 0.4);
+      bassGain.gain.linearRampToValueAtTime(0, time + chordDuration);
+      bassOsc.start(time);
+      bassOsc.stop(time + chordDuration + 0.1);
+
+      // Arpeggio melody (triangle wave, 4 notes per chord)
+      const arpNotes = [...chord.notes, chord.notes[1] * 2]; // add octave
+      const arpDur = chordDuration / 4;
+      arpNotes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(this.musicGain);
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        const t = time + i * arpDur;
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.07, t + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + arpDur * 0.9);
+        gain.gain.linearRampToValueAtTime(0, t + arpDur);
+        osc.start(t);
+        osc.stop(t + arpDur + 0.1);
+      });
+
+      // Melodic accent on certain chords (higher octave sine bell)
+      if (ci === 0 || ci === 2 || ci === 4 || ci === 6) {
+        const bellOsc = audioCtx.createOscillator();
+        const bellGain = audioCtx.createGain();
+        bellOsc.connect(bellGain);
+        bellGain.connect(this.musicGain);
+        bellOsc.type = 'sine';
+        bellOsc.frequency.value = chord.notes[2] * 2; // high octave
+        bellGain.gain.setValueAtTime(0, time + beatDuration);
+        bellGain.gain.linearRampToValueAtTime(0.05, time + beatDuration + 0.05);
+        bellGain.gain.exponentialRampToValueAtTime(0.005, time + beatDuration + beatDuration * 0.8);
+        bellOsc.start(time + beatDuration);
+        bellOsc.stop(time + chordDuration + 0.1);
+      }
+
+      time += chordDuration;
+    });
+
+    const totalDuration = chords.length * chordDuration;
+    setTimeout(() => this.scheduleTitleMusicLoop(), totalDuration * 1000 - 100);
+  },
+
+  playPad(freq, startTime, duration) {
+    const osc1 = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(this.musicGain);
+    osc1.frequency.value = freq;
+    osc1.type = 'sine';
+    osc2.frequency.value = freq * 1.5;
+    osc2.type = 'triangle';
+    gain.gain.setValueAtTime(0.08, startTime);
+    gain.gain.setValueAtTime(0.08, startTime + duration * 0.5);
+    gain.gain.exponentialRampToValueAtTime(0.02, startTime + duration);
+    osc1.start(startTime);
+    osc2.start(startTime);
+    osc1.stop(startTime + duration);
+    osc2.stop(startTime + duration);
+  },
+
+  playBattleMusic() {
+    if (!audioCtx) return;
+    this.stopAllMusic();
+    this.currentMusicTrack = 'battle';
+    this.musicTime = 0;
+    this.scheduleBattleMusicLoop();
+  },
+
+  scheduleBattleMusicLoop() {
+    if (this.currentMusicTrack !== 'battle') return;
+    const now = audioCtx.currentTime;
+    const beatDuration = 0.15;
+
+    const bassNotes = [
+      { freq: 82.41, duration: 2 },  // E2
+      { freq: 110, duration: 2 },    // A2
+      { freq: 82.41, duration: 2 },  // E2
+      { freq: 98, duration: 2 }      // G2
+    ];
+
+    let time = now;
+    bassNotes.forEach(note => {
+      for (let i = 0; i < note.duration / beatDuration; i++) {
+        this.playBassThump(note.freq, time + i * beatDuration, beatDuration * 0.8);
+      }
+      time += note.duration;
+    });
+
+    const melodyNotes = [
+      { freq: 330, duration: 0.6 },  // E4
+      { freq: 247, duration: 0.6 },  // B3
+      { freq: 330, duration: 0.6 },  // E4
+      { freq: 392, duration: 0.6 },  // G4
+      { freq: 330, duration: 0.6 },  // E4
+      { freq: 247, duration: 0.6 },  // B3
+      { freq: 330, duration: 0.6 },  // E4
+      { freq: 392, duration: 1.0 }   // G4
+    ];
+
+    time = now;
+    melodyNotes.forEach(note => {
+      this.playMelodyNote(note.freq, time, note.duration);
+      time += note.duration;
+    });
+
+    const loopDuration = bassNotes.reduce((sum, n) => sum + n.duration, 0);
+    setTimeout(() => this.scheduleBattleMusicLoop(), loopDuration * 1000);
+  },
+
+  playBassThump(freq, startTime, duration) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(this.musicGain);
+
+    osc.frequency.setValueAtTime(freq, startTime);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.7, startTime + duration * 0.3);
+    osc.type = 'square';
+
+    gain.gain.setValueAtTime(0.12, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.02, startTime + duration);
+
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+  },
+
+  playMelodyNote(freq, startTime, duration) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(this.musicGain);
+
+    osc.frequency.value = freq;
+    osc.type = 'triangle';
+
+    gain.gain.setValueAtTime(0.1, startTime);
+    gain.gain.setValueAtTime(0.1, startTime + duration * 0.7);
+    gain.gain.exponentialRampToValueAtTime(0.02, startTime + duration);
+
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+  },
+
+  playSlash1() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const src = audioCtx.createBufferSource();
+    src.buffer = noiseBuffer;
+    const filter = audioCtx.createBiquadFilter();
+    const gain = audioCtx.createGain();
+
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain);
+
+    filter.type = 'highpass';
+    filter.frequency.setValueAtTime(2000, now);
+    filter.frequency.exponentialRampToValueAtTime(500, now + 0.2);
+
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.02, now + 0.2);
+
+    src.playbackRate.value = 1.2;
+    src.start(now);
+    src.stop(now + 0.2);
+  },
+
+  playSlash2() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const src = audioCtx.createBufferSource();
+    src.buffer = noiseBuffer;
+    const filter = audioCtx.createBiquadFilter();
+    const gain = audioCtx.createGain();
+    const panner = audioCtx.createStereoPanner();
+
+    src.connect(filter);
+    filter.connect(panner);
+    panner.connect(gain);
+    gain.connect(this.sfxGain);
+
+    filter.type = 'highpass';
+    filter.frequency.setValueAtTime(1500, now);
+    filter.frequency.exponentialRampToValueAtTime(400, now + 0.25);
+
+    panner.pan.value = Math.random() * 2 - 1;
+
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.02, now + 0.25);
+
+    src.playbackRate.value = 0.9;
+    src.start(now);
+    src.stop(now + 0.25);
+  },
+
+  playSlash3() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    const src = audioCtx.createBufferSource();
+    src.buffer = noiseBuffer;
+    const filter = audioCtx.createBiquadFilter();
+    const gain = audioCtx.createGain();
+
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain);
+
+    filter.type = 'highpass';
+    filter.frequency.setValueAtTime(1200, now);
+    filter.frequency.exponentialRampToValueAtTime(300, now + 0.25);
+
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.05, now + 0.15);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+    src.playbackRate.value = 0.7;
+    src.start(now);
+    src.stop(now + 0.25);
+
+    const osc = audioCtx.createOscillator();
+    const oscGain = audioCtx.createGain();
+    osc.connect(oscGain);
+    oscGain.connect(this.sfxGain);
+
+    osc.frequency.value = 80;
+    osc.type = 'sine';
+
+    oscGain.gain.setValueAtTime(0.12, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+
+    osc.start(now);
+    osc.stop(now + 0.2);
+  },
+
+  playHit() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
+    osc.type = 'sine';
+
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+
+    osc.start(now);
+    osc.stop(now + 0.08);
+
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(this.sfxGain);
+
+    osc2.frequency.value = 600;
+    osc2.type = 'sine';
+
+    gain2.gain.setValueAtTime(0.1, now);
+    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+
+    osc2.start(now);
+    osc2.stop(now + 0.06);
+  },
+
+  playKill() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    const osc1 = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc1.frequency.setValueAtTime(400, now);
+    osc1.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+    osc1.type = 'sine';
+
+    osc2.frequency.setValueAtTime(600, now);
+    osc2.frequency.exponentialRampToValueAtTime(900, now + 0.15);
+    osc2.type = 'triangle';
+
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.15);
+    osc2.stop(now + 0.15);
+  },
+
+  playSwordQi() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.frequency.setValueAtTime(250, now);
+    osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
+    osc.type = 'sine';
+
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.3, now + 0.1);
+    gain.gain.exponentialRampToValueAtTime(0.02, now + 0.3);
+
+    osc.start(now);
+    osc.stop(now + 0.3);
+  },
+
+  playDash() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    const src = audioCtx.createBufferSource();
+    src.buffer = noiseBuffer;
+    const filter = audioCtx.createBiquadFilter();
+    const gain = audioCtx.createGain();
+
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain);
+
+    filter.type = 'highpass';
+    filter.frequency.setValueAtTime(3000, now);
+    filter.frequency.exponentialRampToValueAtTime(1000, now + 0.12);
+
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+
+    src.playbackRate.value = 1.5;
+    src.start(now);
+    src.stop(now + 0.12);
+  },
+
+  playDamage() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.frequency.setValueAtTime(120, now);
+    osc.frequency.exponentialRampToValueAtTime(60, now + 0.1);
+    osc.type = 'sine';
+
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+    osc.start(now);
+    osc.stop(now + 0.1);
+
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(this.sfxGain);
+
+    osc2.frequency.setValueAtTime(300, now + 0.05);
+    osc2.frequency.exponentialRampToValueAtTime(150, now + 0.15);
+    osc2.type = 'triangle';
+
+    gain2.gain.setValueAtTime(0.1, now + 0.05);
+    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+    osc2.start(now + 0.05);
+    osc2.stop(now + 0.15);
+  },
+
+  playDeath() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    const notes = [
+      { freq: 300, duration: 0.2 },
+      { freq: 250, duration: 0.2 },
+      { freq: 200, duration: 0.3 },
+      { freq: 150, duration: 0.4 },
+      { freq: 100, duration: 0.5 }
+    ];
+
+    let time = now;
+    notes.forEach(note => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.frequency.value = note.freq;
+      osc.type = 'sine';
+
+      gain.gain.setValueAtTime(0.15, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + note.duration);
+
+      osc.start(time);
+      osc.stop(time + note.duration);
+
+      time += note.duration;
+    });
+  },
+
+  playBlock() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(400, now + 0.15);
+    osc.type = 'square';
+
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.02, now + 0.15);
+
+    osc.start(now);
+    osc.stop(now + 0.15);
+  },
+
+  stopAllMusic() {
+    this.currentMusicTrack = null;
+    this.titleMusicOscillators.forEach(osc => {
+      try { osc.stop(); } catch(e) {}
+    });
+    this.battleMusicOscillators.forEach(osc => {
+      try { osc.stop(); } catch(e) {}
+    });
+    this.titleMusicOscillators = [];
+    this.battleMusicOscillators = [];
+  }
+};
+
+// Start game
+function startGame(gender) {
+  playerGender = gender;
+  isDead = false;
+  playerHP = maxHP;
+  slimesDefeated = 0;
+  isSage = false;
+  isGrand = false;
+  buildPlayerModel();
+  document.getElementById('titleScreen').style.display = 'none';
+  document.getElementById('deathScreen').style.display = 'none';
+  document.getElementById('hud').style.display = 'block';
+  document.getElementById('crosshair').style.display = 'block';
+  document.getElementById('charLabel').textContent = gender === 'male' ? 'HERO' : 'HEROINE';
+  updateSlimeCounter();
+  updateHPBar();
+  gameStarted = true;
+  AudioSystem.playMenuClick();
+  AudioSystem.stopAllMusic();
+  AudioSystem.playBattleMusic();
+  renderer.domElement.requestPointerLock();
+}
+
+function retryGame() {
+  AudioSystem.playMenuClick();
+  // Full reset - position, slimes, everything
+  player.position.set(0, getTerrainHeight(0, 0), 0);
+  playerVelocityY = 0;
+  isGrounded = true;
+  isAttacking = false;
+  isBlocking = false;
+  attackTimer = 0;
+  attackCooldown = 0;
+  comboStep = 0;
+  comboQueued = false;
+  comboCounter = 0;
+  playerInvincible = 0;
+  dashCooldown = 0;
+  cameraAngleX = Math.PI;
+  cameraAngleY = 0.3;
+  // Clean up sword qi
+  swordQiList.forEach(qi => scene.remove(qi.mesh));
+  swordQiList = [];
+  // Clean up arrows
+  arrowList.forEach(a => scene.remove(a.mesh));
+  arrowList = [];
+  arrowCooldown = 0;
+  // Reset all slimes
+  slimesDefeated = 0;
+  slimes.forEach(slime => {
+    const nx = (Math.random() - 0.5) * 140;
+    const nz = (Math.random() - 0.5) * 140;
+    const ny = getTerrainHeight(nx, nz);
+    slime.position.set(nx, ny, nz);
+    slime.scale.set(1, 1, 1);
+    slime.userData.hp = slime.userData.maxHp;
+    slime.userData.alive = true;
+    slime.userData.hitFlash = 0;
+    slime.userData.deathTimer = 0;
+    slime.userData.knockbackVel.set(0, 0, 0);
+    slime.userData.patrolCenter.set(nx, ny, nz);
+    slime.userData.state = 'patrol';
+    slime.children[0].material.emissive.setHex(0x331122);
+  });
+  // Clean particles
+  particlePool.forEach(p => { p.mesh.visible = false; p.life = 0; });
+  // Reset sage
+  isSage = false;
+  sageUnlockShown = false;
+  lightningOrbs.forEach(orb => scene.remove(orb.mesh));
+  lightningOrbs = [];
+  meteorList.forEach(m => scene.remove(m.mesh));
+  meteorList = [];
+  meteorCooldown = 0;
+  lightningOrbAngle = 0;
+  sageAutoArrowCooldown = 0;
+  // Reset grand
+  isGrand = false;
+  grandUnlockShown = false;
+  holyThunderCooldown = 0;
+  grandArrowCooldown = 0;
+  holyThunderBolts.forEach(tb => scene.remove(tb.group));
+  holyThunderBolts = [];
+  // Now start
+  startGame(playerGender);
+}
+
+// Return to menu
+function returnToMenu() {
+  gameStarted = false;
+  isDead = false;
+  if (document.pointerLockElement) document.exitPointerLock();
+  document.getElementById('titleScreen').style.display = 'flex';
+  document.getElementById('hud').style.display = 'none';
+  document.getElementById('deathScreen').style.display = 'none';
+  document.getElementById('crosshair').style.display = 'none';
+  document.getElementById('blockIndicator').style.display = 'none';
+
+  AudioSystem.stopAllMusic();
+  AudioSystem.playTitleMusic();
+
+  // Reset player
+  playerHP = maxHP;
+  updateHPBar();
+  player.position.set(0, getTerrainHeight(0, 0), 0);
+  playerVelocityY = 0;
+  isGrounded = true;
+  isAttacking = false;
+  isBlocking = false;
+  wasBlocking = false;
+  attackTimer = 0;
+  attackCooldown = 0;
+  comboStep = 0;
+  comboQueued = false;
+  playerInvincible = 0;
+  dashCooldown = 0;
+  // Clean up sword qi
+  swordQiList.forEach(qi => scene.remove(qi.mesh));
+  swordQiList = [];
+  // Clean up arrows
+  arrowList.forEach(a => scene.remove(a.mesh));
+  arrowList = [];
+  arrowCooldown = 0;
+  cameraAngleX = Math.PI;
+  cameraAngleY = 0.3;
+
+  // Reset slimes
+  slimesDefeated = 0;
+  slimes.forEach(slime => {
+    const nx = (Math.random() - 0.5) * 100;
+    const nz = (Math.random() - 0.5) * 100;
+    const ny = getTerrainHeight(nx, nz);
+    slime.position.set(nx, ny, nz);
+    slime.scale.set(1, 1, 1);
+    slime.userData.hp = slime.userData.maxHp;
+    slime.userData.alive = true;
+    slime.userData.hitFlash = 0;
+    slime.userData.deathTimer = 0;
+    slime.userData.patrolCenter.set(nx, ny, nz);
+    slime.userData.state = 'patrol';
+    slime.children[0].material.emissive.setHex(0x331122);
+  });
+
+  // Reset sage
+  isSage = false;
+  sageUnlockShown = false;
+  lightningOrbs.forEach(orb => scene.remove(orb.mesh));
+  lightningOrbs = [];
+  meteorList.forEach(m => scene.remove(m.mesh));
+  meteorList = [];
+  meteorCooldown = 0;
+  lightningOrbAngle = 0;
+  sageAutoArrowCooldown = 0;
+  // Reset grand
+  isGrand = false;
+  grandUnlockShown = false;
+  holyThunderCooldown = 0;
+  grandArrowCooldown = 0;
+  holyThunderBolts.forEach(tb => scene.remove(tb.group));
+  holyThunderBolts = [];
+}
+
+// Init
+function init() {
+  clock = new THREE.Clock();
+  scene = new THREE.Scene();
+
+  // Fog for depth
+  scene.fog = new THREE.FogExp2(0x88ccaa, 0.008);
+
+  // Sky gradient
+  const skyGeo = new THREE.SphereGeometry(500, 32, 32);
+  const skyMat = new THREE.ShaderMaterial({
+    uniforms: {
+      topColor: { value: new THREE.Color(0x4488cc) },
+      bottomColor: { value: new THREE.Color(0xaaddbb) },
+      offset: { value: 20 },
+      exponent: { value: 0.4 }
+    },
+    vertexShader: `
+      varying vec3 vWorldPosition;
+      void main() {
+        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = worldPosition.xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 topColor;
+      uniform vec3 bottomColor;
+      uniform float offset;
+      uniform float exponent;
+      varying vec3 vWorldPosition;
+      void main() {
+        float h = normalize(vWorldPosition + offset).y;
+        gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+      }
+    `,
+    side: THREE.BackSide
+  });
+  scene.add(new THREE.Mesh(skyGeo, skyMat));
+
+  // Lighting
+  const ambientLight = new THREE.AmbientLight(0x6688aa, 0.6);
+  scene.add(ambientLight);
+
+  const dirLight = new THREE.DirectionalLight(0xffeedd, 1.0);
+  dirLight.position.set(50, 80, 30);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.set(2048, 2048);
+  dirLight.shadow.camera.near = 1;
+  dirLight.shadow.camera.far = 200;
+  dirLight.shadow.camera.left = -60;
+  dirLight.shadow.camera.right = 60;
+  dirLight.shadow.camera.top = 60;
+  dirLight.shadow.camera.bottom = -60;
+  scene.add(dirLight);
+
+  const hemiLight = new THREE.HemisphereLight(0x88bbff, 0x445522, 0.4);
+  scene.add(hemiLight);
+
+  // Camera
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+  // Renderer
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+  document.body.appendChild(renderer.domElement);
+
+  createTerrain();
+  createGrass();
+  createTrees();
+  createPlayer();
+  createSlimes();
+
+  // Setup button audio
+  document.querySelectorAll('.charBtn').forEach(btn => {
+    btn.addEventListener('mouseenter', () => {
+      if (audioInitialized) AudioSystem.playMenuHover();
+    });
+  });
+
+  document.querySelectorAll('.deathBtn').forEach(btn => {
+    btn.addEventListener('mouseenter', () => {
+      if (audioInitialized) AudioSystem.playMenuHover();
+    });
+  });
+
+  // Events
+  document.addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if (e.code === 'Escape' && gameStarted && !isDead) returnToMenu();
+  });
+  document.addEventListener('keyup', e => { keys[e.code] = false; });
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mousedown', onMouseDown);
+  document.addEventListener('mouseup', onMouseUp);
+  document.addEventListener('pointerlockchange', () => {
+    isPointerLocked = document.pointerLockElement === renderer.domElement;
+  });
+  renderer.domElement.addEventListener('click', () => {
+    if (gameStarted && !isPointerLocked) renderer.domElement.requestPointerLock();
+  });
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // Initialize audio on first user interaction
+  document.addEventListener('click', () => {
+    if (!audioInitialized) {
+      AudioSystem.init();
+      AudioSystem.playTitleMusic();
+    }
+  }, { once: true });
+
+  document.addEventListener('keydown', () => {
+    if (!audioInitialized) {
+      AudioSystem.init();
+      AudioSystem.playTitleMusic();
+    }
+  }, { once: true });
+
+  animate();
+}
+
+// ============ TERRAIN ============
+function createTerrain() {
+  const geo = new THREE.PlaneGeometry(200, 200, 80, 80);
+  geo.rotateX(-Math.PI / 2);
+  const positions = geo.attributes.position;
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i);
+    const z = positions.getZ(i);
+    let y = Math.sin(x * 0.05) * Math.cos(z * 0.05) * 2;
+    y += Math.sin(x * 0.02 + z * 0.03) * 3;
+    y += Math.sin(x * 0.1) * Math.cos(z * 0.08) * 0.5;
+    positions.setY(i, y);
+  }
+  geo.computeVertexNormals();
+
+  // Vertex colors for grass variation
+  const colors = new Float32Array(positions.count * 3);
+  for (let i = 0; i < positions.count; i++) {
+    const y = positions.getY(i);
+    const r = 0.2 + Math.random() * 0.1 + y * 0.02;
+    const g = 0.55 + Math.random() * 0.15 + y * 0.03;
+    const b = 0.1 + Math.random() * 0.08;
+    colors[i * 3] = r;
+    colors[i * 3 + 1] = g;
+    colors[i * 3 + 2] = b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const terrain = new THREE.Mesh(geo, mat);
+  terrain.receiveShadow = true;
+  scene.add(terrain);
+}
+
+function getTerrainHeight(x, z) {
+  let y = Math.sin(x * 0.05) * Math.cos(z * 0.05) * 2;
+  y += Math.sin(x * 0.02 + z * 0.03) * 3;
+  y += Math.sin(x * 0.1) * Math.cos(z * 0.08) * 0.5;
+  return y;
+}
+
+// ============ GRASS PATCHES ============
+function createGrass() {
+  const grassGeo = new THREE.BufferGeometry();
+  const grassCount = 8000;
+  const positions = new Float32Array(grassCount * 9);
+  const colors = new Float32Array(grassCount * 9);
+
+  for (let i = 0; i < grassCount; i++) {
+    const x = (Math.random() - 0.5) * 180;
+    const z = (Math.random() - 0.5) * 180;
+    const y = getTerrainHeight(x, z);
+    const h = 0.3 + Math.random() * 0.5;
+    const w = 0.1 + Math.random() * 0.1;
+    const idx = i * 9;
+
+    positions[idx] = x - w; positions[idx+1] = y; positions[idx+2] = z;
+    positions[idx+3] = x + w; positions[idx+4] = y; positions[idx+5] = z;
+    positions[idx+6] = x + (Math.random()-0.5)*0.1; positions[idx+7] = y + h; positions[idx+8] = z + (Math.random()-0.5)*0.1;
+
+    for (let j = 0; j < 3; j++) {
+      const ci = idx + j * 3;
+      colors[ci] = 0.15 + Math.random() * 0.15;
+      colors[ci+1] = 0.5 + Math.random() * 0.3;
+      colors[ci+2] = 0.05 + Math.random() * 0.1;
+    }
+  }
+  grassGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  grassGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const grassMat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide });
+  const grassMesh = new THREE.Mesh(grassGeo, grassMat);
+  scene.add(grassMesh);
+}
+
+// ============ TREES ============
+function createTree(x, z) {
+  const group = new THREE.Group();
+  const y = getTerrainHeight(x, z);
+
+  // Trunk
+  const trunkGeo = new THREE.CylinderGeometry(0.3, 0.5, 3, 6);
+  const trunkMat = new THREE.MeshLambertMaterial({ color: 0x6b4226 });
+  const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+  trunk.position.y = 1.5;
+  trunk.castShadow = true;
+  group.add(trunk);
+
+  // Foliage layers
+  const leafColors = [0x2d8a4e, 0x3a9d5e, 0x228b22, 0x1a7a3a];
+  const layers = 3 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < layers; i++) {
+    const r = 2.5 - i * 0.5 + Math.random() * 0.3;
+    const h = 2 - i * 0.3;
+    const leafGeo = new THREE.ConeGeometry(r, h, 7);
+    const leafMat = new THREE.MeshLambertMaterial({
+      color: leafColors[i % leafColors.length]
+    });
+    const leaf = new THREE.Mesh(leafGeo, leafMat);
+    leaf.position.y = 3 + i * 1.2;
+    leaf.castShadow = true;
+    group.add(leaf);
+  }
+
+  group.position.set(x, y, z);
+  const scale = 0.8 + Math.random() * 0.6;
+  group.scale.set(scale, scale, scale);
+  group.rotation.y = Math.random() * Math.PI * 2;
+  scene.add(group);
+  return group;
+}
+
+function createTrees() {
+  const treePositions = [
+    [-20, -15], [-25, -10], [-22, -20], [-18, -25], [-30, -18],
+    [25, 20], [30, 15], [28, 25], [22, 30], [35, 22],
+    [-35, 25], [-30, 30], [-40, 20],
+    [15, -30], [20, -35], [10, -28],
+    [-10, 40], [-5, 38], [-15, 42],
+    [40, -10], [45, -5], [38, -15],
+    [-45, -5], [-42, 5], [-48, 0],
+    [5, 50], [0, 48], [10, 52],
+  ];
+  treePositions.forEach(([x, z]) => createTree(x, z));
+}
+
+// ============ PLAYER ============
+function createPlayer() {
+  player = new THREE.Group();
+  player.position.set(0, getTerrainHeight(0, 0), 0);
+
+  buildPlayerModel();
+  player.castShadow = true;
+  scene.add(player);
+}
+
+function buildPlayerModel() {
+  while (player.children.length) player.remove(player.children[0]);
+
+  // === GRAND MODE (2nd evolution) ===
+  if (isGrand) {
+    const isMaleGrand = playerGender === 'male';
+
+    // Head with holy crown/halo
+    const headGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    const headMat = new THREE.MeshLambertMaterial({ color: isMaleGrand ? 0xffe0c0 : 0xfff0e0 });
+    const head = new THREE.Mesh(headGeo, headMat);
+    head.position.y = 1.9;
+    head.castShadow = true;
+    player.add(head);
+
+    // Halo ring
+    const haloGeo = new THREE.BoxGeometry(0.8, 0.04, 0.8);
+    const haloMat = new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.8 });
+    const halo = new THREE.Mesh(haloGeo, haloMat);
+    halo.position.y = 2.3;
+    player.add(halo);
+    // Inner halo glow
+    const haloInner = new THREE.Mesh(
+      new THREE.BoxGeometry(0.6, 0.06, 0.6),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 })
+    );
+    haloInner.position.y = 2.3;
+    player.add(haloInner);
+
+    // Eyes - divine glow
+    const eyeGeo = new THREE.BoxGeometry(0.08, 0.04, 0.02);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+    leftEye.position.set(-0.1, 1.93, 0.26);
+    player.add(leftEye);
+    const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+    rightEye.position.set(0.1, 1.93, 0.26);
+    player.add(rightEye);
+
+    if (isMaleGrand) {
+      // === GRAND POPE ===
+      // White and gold papal robes
+      const robeColor = 0xfafafa;
+      const goldColor = 0xffd700;
+
+      // Crown/Mitre
+      const mitreGeo = new THREE.BoxGeometry(0.35, 0.4, 0.3);
+      const mitreMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+      const mitre = new THREE.Mesh(mitreGeo, mitreMat);
+      mitre.position.y = 2.35;
+      player.add(mitre);
+      const mitreTop = new THREE.Mesh(
+        new THREE.BoxGeometry(0.2, 0.15, 0.2),
+        new THREE.MeshLambertMaterial({ color: 0xffffff })
+      );
+      mitreTop.position.y = 2.6;
+      player.add(mitreTop);
+      // Gold cross on mitre
+      const crossV = new THREE.Mesh(
+        new THREE.BoxGeometry(0.04, 0.2, 0.02),
+        new THREE.MeshBasicMaterial({ color: goldColor })
+      );
+      crossV.position.set(0, 2.45, 0.16);
+      player.add(crossV);
+      const crossH = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 0.04, 0.02),
+        new THREE.MeshBasicMaterial({ color: goldColor })
+      );
+      crossH.position.set(0, 2.5, 0.16);
+      player.add(crossH);
+
+      // Upper robe
+      const upperRobe = new THREE.Mesh(
+        new THREE.BoxGeometry(0.7, 0.8, 0.45),
+        new THREE.MeshLambertMaterial({ color: robeColor })
+      );
+      upperRobe.position.y = 1.2;
+      upperRobe.castShadow = true;
+      player.add(upperRobe);
+
+      // Gold trim bands
+      const trimMat = new THREE.MeshLambertMaterial({ color: goldColor });
+      [1.55, 1.2, 0.85, 0.45].forEach(y => {
+        const trim = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.04, 0.47), trimMat);
+        trim.position.y = y;
+        player.add(trim);
+      });
+
+      // Lower robe
+      const lowerRobe = new THREE.Mesh(
+        new THREE.BoxGeometry(0.75, 0.6, 0.5),
+        new THREE.MeshLambertMaterial({ color: robeColor })
+      );
+      lowerRobe.position.y = 0.55;
+      lowerRobe.castShadow = true;
+      player.add(lowerRobe);
+      const robeBottom = new THREE.Mesh(
+        new THREE.BoxGeometry(0.8, 0.4, 0.55),
+        new THREE.MeshLambertMaterial({ color: robeColor })
+      );
+      robeBottom.position.y = 0.2;
+      player.add(robeBottom);
+
+      // Holy cross emblem on chest
+      const chestCrossV = new THREE.Mesh(
+        new THREE.BoxGeometry(0.05, 0.25, 0.02),
+        new THREE.MeshBasicMaterial({ color: goldColor })
+      );
+      chestCrossV.position.set(0, 1.3, 0.24);
+      player.add(chestCrossV);
+      const chestCrossH = new THREE.Mesh(
+        new THREE.BoxGeometry(0.15, 0.05, 0.02),
+        new THREE.MeshBasicMaterial({ color: goldColor })
+      );
+      chestCrossH.position.set(0, 1.35, 0.24);
+      player.add(chestCrossH);
+
+      // Arms (white sleeves with gold cuffs)
+      const sleeveGeo = new THREE.BoxGeometry(0.2, 0.5, 0.2);
+      const sleeveMat = new THREE.MeshLambertMaterial({ color: robeColor });
+      const handMat = new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.9 });
+
+      const rightArm = new THREE.Group();
+      rightArm.add(new THREE.Mesh(sleeveGeo, sleeveMat));
+      rightArm.children[0].position.y = -0.25;
+      const rCuff = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.06, 0.22), trimMat);
+      rCuff.position.y = -0.5;
+      rightArm.add(rCuff);
+      const rHand = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), handMat);
+      rHand.position.y = -0.6;
+      rightArm.add(rHand);
+      rightArm.position.set(-0.45, 1.5, 0);
+      rightArm.rotation.x = -0.3;
+      rightArm.rotation.z = 0.3;
+      player.add(rightArm);
+      player.rightArm = rightArm;
+
+      const leftArm = new THREE.Group();
+      leftArm.add(new THREE.Mesh(sleeveGeo, sleeveMat));
+      leftArm.children[0].position.y = -0.25;
+      const lCuff = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.06, 0.22), trimMat);
+      lCuff.position.y = -0.5;
+      leftArm.add(lCuff);
+      const lHand = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), handMat);
+      lHand.position.y = -0.6;
+      leftArm.add(lHand);
+      leftArm.position.set(0.45, 1.5, 0);
+      leftArm.rotation.x = -0.3;
+      leftArm.rotation.z = -0.3;
+      player.add(leftArm);
+      player.leftArm = leftArm;
+
+      // Holy staff - tall golden staff with radiant cross
+      const staffGeo = new THREE.BoxGeometry(0.06, 1.8, 0.06);
+      const staffMat = new THREE.MeshPhongMaterial({ color: goldColor, shininess: 150 });
+      const staff = new THREE.Mesh(staffGeo, staffMat);
+      staff.position.set(0.05, 0, 0);
+      rightArm.add(staff);
+      // Cross on top of staff
+      const sCrossV = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.25, 0.08),
+        new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      sCrossV.position.set(0.05, 0.85, 0);
+      rightArm.add(sCrossV);
+      const sCrossH = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.08, 0.08),
+        new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      sCrossH.position.set(0.05, 0.92, 0);
+      rightArm.add(sCrossH);
+
+    } else {
+      // === GRAND SAINT MOTHER ===
+      // White and silver celestial robes with blue accents
+      const robeColor = 0xf0f0ff;
+      const silverColor = 0xc0d0e0;
+      const celestialBlue = 0x88bbff;
+
+      // Long flowing white hair
+      const hairMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+      const sideHairL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.9, 0.15), hairMat);
+      sideHairL.position.set(-0.3, 1.5, 0.05);
+      player.add(sideHairL);
+      const sideHairR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.9, 0.15), hairMat);
+      sideHairR.position.set(0.3, 1.5, 0.05);
+      player.add(sideHairR);
+      const backHair = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.2, 0.12), hairMat);
+      backHair.position.set(0, 1.2, -0.28);
+      player.add(backHair);
+
+      // Celestial tiara
+      const tiaraMat = new THREE.MeshPhongMaterial({ color: silverColor, shininess: 150 });
+      const tiara = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.06, 0.45), tiaraMat);
+      tiara.position.y = 2.15;
+      player.add(tiara);
+      // Central gem
+      const tiaraGem = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, 0.1, 0.04),
+        new THREE.MeshBasicMaterial({ color: 0x88ddff })
+      );
+      tiaraGem.position.set(0, 2.18, 0.23);
+      player.add(tiaraGem);
+
+      // Upper robe (white with silver)
+      const upperRobe = new THREE.Mesh(
+        new THREE.BoxGeometry(0.65, 0.75, 0.4),
+        new THREE.MeshLambertMaterial({ color: robeColor })
+      );
+      upperRobe.position.y = 1.22;
+      upperRobe.castShadow = true;
+      player.add(upperRobe);
+
+      // Silver trim bands
+      const trimMat = new THREE.MeshLambertMaterial({ color: silverColor });
+      [1.55, 1.2, 0.88, 0.5].forEach(y => {
+        const trim = new THREE.Mesh(new THREE.BoxGeometry(0.67, 0.03, 0.42), trimMat);
+        trim.position.y = y;
+        player.add(trim);
+      });
+
+      // Lower flowing robe
+      const lowerRobe = new THREE.Mesh(
+        new THREE.BoxGeometry(0.72, 0.55, 0.48),
+        new THREE.MeshLambertMaterial({ color: robeColor })
+      );
+      lowerRobe.position.y = 0.58;
+      player.add(lowerRobe);
+      const robeBottom = new THREE.Mesh(
+        new THREE.BoxGeometry(0.8, 0.45, 0.55),
+        new THREE.MeshLambertMaterial({ color: robeColor })
+      );
+      robeBottom.position.y = 0.22;
+      player.add(robeBottom);
+
+      // Celestial emblem (star shape on chest)
+      const starMat = new THREE.MeshBasicMaterial({ color: celestialBlue });
+      const star = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.02), starMat);
+      star.position.set(0, 1.3, 0.22);
+      star.rotation.z = Math.PI / 4;
+      player.add(star);
+      const starInner = new THREE.Mesh(
+        new THREE.BoxGeometry(0.08, 0.08, 0.02),
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+      );
+      starInner.position.set(0, 1.3, 0.23);
+      player.add(starInner);
+
+      // Shoulder crystals (larger, more divine)
+      const shCrystalMat = new THREE.MeshPhongMaterial({ color: 0xaaddff, emissive: 0x4488cc, shininess: 200 });
+      const shL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), shCrystalMat);
+      shL.position.set(-0.38, 1.58, 0.1);
+      shL.rotation.y = Math.PI / 4;
+      player.add(shL);
+      const shR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.12), shCrystalMat);
+      shR.position.set(0.38, 1.58, 0.1);
+      shR.rotation.y = Math.PI / 4;
+      player.add(shR);
+
+      // Arms (white flowing sleeves)
+      const sleeveGeo = new THREE.BoxGeometry(0.18, 0.5, 0.18);
+      const sleeveMat = new THREE.MeshLambertMaterial({ color: robeColor });
+      const handMat = new THREE.MeshBasicMaterial({ color: celestialBlue, transparent: true, opacity: 0.8 });
+
+      const rightArm = new THREE.Group();
+      rightArm.add(new THREE.Mesh(sleeveGeo, sleeveMat));
+      rightArm.children[0].position.y = -0.25;
+      const rHand = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), handMat);
+      rHand.position.y = -0.55;
+      rightArm.add(rHand);
+      rightArm.position.set(-0.42, 1.5, 0);
+      rightArm.rotation.x = -0.3;
+      rightArm.rotation.z = 0.3;
+      player.add(rightArm);
+      player.rightArm = rightArm;
+
+      const leftArm = new THREE.Group();
+      leftArm.add(new THREE.Mesh(sleeveGeo, sleeveMat));
+      leftArm.children[0].position.y = -0.25;
+      const lHand = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), handMat);
+      lHand.position.y = -0.55;
+      leftArm.add(lHand);
+      leftArm.position.set(0.42, 1.5, 0);
+      leftArm.rotation.x = -0.3;
+      leftArm.rotation.z = -0.3;
+      player.add(leftArm);
+      player.leftArm = leftArm;
+
+      // Celestial bow (larger, radiant)
+      const bowGroup = new THREE.Group();
+      const bowMat = new THREE.MeshPhongMaterial({ color: silverColor, shininess: 150 });
+      const bowMid = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.12, 0.05), bowMat);
+      bowGroup.add(bowMid);
+      const bowUpper = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.45, 0.04), bowMat);
+      bowUpper.position.set(0, 0.3, 0);
+      bowUpper.rotation.z = 0.1;
+      bowGroup.add(bowUpper);
+      const bowLower = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.45, 0.04), bowMat);
+      bowLower.position.set(0, -0.3, 0);
+      bowLower.rotation.z = -0.1;
+      bowGroup.add(bowLower);
+      // Glowing divine string
+      const stringMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const bowString = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.9, 0.015), stringMat);
+      bowString.position.z = 0.08;
+      bowGroup.add(bowString);
+      // Radiant tips
+      const tipMat = new THREE.MeshBasicMaterial({ color: 0xaaddff });
+      const topTip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.06), tipMat);
+      topTip.position.set(0, 0.52, 0);
+      bowGroup.add(topTip);
+      const botTip = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.06), tipMat);
+      botTip.position.set(0, -0.52, 0);
+      bowGroup.add(botTip);
+      bowGroup.rotation.x = Math.PI / 2;
+      bowGroup.position.set(0, -0.55, 0.1);
+      rightArm.add(bowGroup);
+    }
+
+    // Dummy legs
+    const dummyLeg = new THREE.Group();
+    player.add(dummyLeg);
+    player.leftLeg = dummyLeg;
+    const dummyLeg2 = new THREE.Group();
+    player.add(dummyLeg2);
+    player.rightLeg = dummyLeg2;
+    player.sword = null;
+    player.shield = null;
+
+    return; // Skip sage and normal model building
+  }
+
+  // === SAGE MODE ===
+  if (isSage) {
+    const isMaleSage = playerGender === 'male';
+    const cloakColor = isMaleSage ? 0x2a1a4a : 0x1a2a4a; // purple / midnight blue
+    const trimColor = isMaleSage ? 0xdaa520 : 0xc0c0c0; // gold / silver
+    const glowColor = isMaleSage ? 0x8844ff : 0x44aaff; // purple / ice blue
+    const eyeColor = isMaleSage ? 0xffaa00 : 0x44ffff; // amber / cyan
+
+    // Head (hooded)
+    const hoodGeo = new THREE.BoxGeometry(0.55, 0.5, 0.55);
+    const hoodMat = new THREE.MeshLambertMaterial({ color: cloakColor });
+    const hood = new THREE.Mesh(hoodGeo, hoodMat);
+    hood.position.y = 1.85;
+    hood.castShadow = true;
+    player.add(hood);
+
+    // Hood trim
+    const hoodTrimGeo = new THREE.BoxGeometry(0.57, 0.06, 0.57);
+    const hoodTrimMat = new THREE.MeshLambertMaterial({ color: trimColor });
+    const hoodTrim = new THREE.Mesh(hoodTrimGeo, hoodTrimMat);
+    hoodTrim.position.y = 1.62;
+    player.add(hoodTrim);
+
+    // Female sage: hair flowing from under hood
+    if (!isMaleSage) {
+      const hairMat = new THREE.MeshLambertMaterial({ color: 0xddeeff });
+      const sideHairL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.7, 0.15), hairMat);
+      sideHairL.position.set(-0.28, 1.5, 0.05);
+      player.add(sideHairL);
+      const sideHairR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.7, 0.15), hairMat);
+      sideHairR.position.set(0.28, 1.5, 0.05);
+      player.add(sideHairR);
+      const backHair = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.9, 0.12), hairMat);
+      backHair.position.set(0, 1.35, -0.28);
+      player.add(backHair);
+    }
+
+    // Face
+    const faceGeo = new THREE.BoxGeometry(0.45, 0.35, 0.02);
+    const faceMat = new THREE.MeshBasicMaterial({ color: 0x0a0a1a });
+    const face = new THREE.Mesh(faceGeo, faceMat);
+    face.position.set(0, 1.82, 0.27);
+    player.add(face);
+
+    // Glowing eyes
+    const eyeGeo = new THREE.BoxGeometry(0.08, 0.04, 0.02);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: eyeColor });
+    const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+    leftEye.position.set(-0.1, 1.85, 0.29);
+    player.add(leftEye);
+    const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+    rightEye.position.set(0.1, 1.85, 0.29);
+    player.add(rightEye);
+
+    // Cloak body
+    const cloakGeo = new THREE.BoxGeometry(0.65, 0.8, 0.4);
+    const cloakMat = new THREE.MeshLambertMaterial({ color: cloakColor });
+    const cloak = new THREE.Mesh(cloakGeo, cloakMat);
+    cloak.position.y = 1.2;
+    cloak.castShadow = true;
+    player.add(cloak);
+
+    // Cloak lower
+    const cloakLowerGeo = new THREE.BoxGeometry(0.7, 0.5, 0.45);
+    const cloakLower = new THREE.Mesh(cloakLowerGeo, cloakMat);
+    cloakLower.position.y = 0.65;
+    cloakLower.castShadow = true;
+    player.add(cloakLower);
+
+    // Robe bottom
+    const robeBottomGeo = new THREE.BoxGeometry(0.75, 0.45, 0.5);
+    const robeBottom = new THREE.Mesh(robeBottomGeo, cloakMat);
+    robeBottom.position.y = 0.22;
+    robeBottom.castShadow = true;
+    player.add(robeBottom);
+
+    // Trim
+    const trimGeo = new THREE.BoxGeometry(0.67, 0.04, 0.42);
+    const trimMat = new THREE.MeshLambertMaterial({ color: trimColor });
+    const trim1 = new THREE.Mesh(trimGeo, trimMat);
+    trim1.position.y = 0.82;
+    player.add(trim1);
+    const trim2 = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.04, 0.47), trimMat);
+    trim2.position.y = 0.42;
+    player.add(trim2);
+
+    // Chest symbol
+    const symbolMat = new THREE.MeshBasicMaterial({ color: glowColor });
+    const symbol = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.02), symbolMat);
+    symbol.position.set(0, 1.25, 0.22);
+    player.add(symbol);
+    const symbolInner = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.08, 0.02),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+    symbolInner.position.set(0, 1.25, 0.23);
+    player.add(symbolInner);
+
+    // Female sage: additional decorative elements
+    if (!isMaleSage) {
+      // Shoulder crystals
+      const shCrystalGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+      const shCrystalMat = new THREE.MeshPhongMaterial({ color: 0x44aaff, emissive: 0x2266aa, shininess: 150 });
+      const shCrystalL = new THREE.Mesh(shCrystalGeo, shCrystalMat);
+      shCrystalL.position.set(-0.35, 1.55, 0.1);
+      shCrystalL.rotation.y = Math.PI / 4;
+      player.add(shCrystalL);
+      const shCrystalR = new THREE.Mesh(shCrystalGeo, shCrystalMat);
+      shCrystalR.position.set(0.35, 1.55, 0.1);
+      shCrystalR.rotation.y = Math.PI / 4;
+      player.add(shCrystalR);
+      // Circlet on hood
+      const circletGeo = new THREE.BoxGeometry(0.4, 0.04, 0.04);
+      const circletMat = new THREE.MeshLambertMaterial({ color: 0xc0c0c0 });
+      const circlet = new THREE.Mesh(circletGeo, circletMat);
+      circlet.position.set(0, 2.05, 0.22);
+      player.add(circlet);
+      const circletGem = new THREE.Mesh(
+        new THREE.BoxGeometry(0.08, 0.08, 0.04),
+        new THREE.MeshPhongMaterial({ color: 0x44ffff, emissive: 0x22aaaa })
+      );
+      circletGem.position.set(0, 2.05, 0.25);
+      player.add(circletGem);
+    }
+
+    // Arms (sleeves)
+    const sleeveGeo = new THREE.BoxGeometry(0.2, 0.5, 0.2);
+    const sleeveMat = new THREE.MeshLambertMaterial({ color: cloakColor });
+    const handGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+    const handMat = new THREE.MeshBasicMaterial({ color: glowColor, transparent: true, opacity: 0.8 });
+
+    const rightArm = new THREE.Group();
+    const rSleeve = new THREE.Mesh(sleeveGeo, sleeveMat);
+    rSleeve.position.y = -0.25;
+    rSleeve.castShadow = true;
+    rightArm.add(rSleeve);
+    const rHand = new THREE.Mesh(handGeo, handMat);
+    rHand.position.y = -0.55;
+    rightArm.add(rHand);
+    rightArm.position.set(-0.42, 1.5, 0);
+    rightArm.rotation.x = -0.3;
+    rightArm.rotation.z = 0.3;
+    player.add(rightArm);
+    player.rightArm = rightArm;
+
+    const leftArm = new THREE.Group();
+    const lSleeve = new THREE.Mesh(sleeveGeo, sleeveMat);
+    lSleeve.position.y = -0.25;
+    lSleeve.castShadow = true;
+    leftArm.add(lSleeve);
+    const lHand = new THREE.Mesh(handGeo, handMat);
+    lHand.position.y = -0.55;
+    leftArm.add(lHand);
+    leftArm.position.set(0.42, 1.5, 0);
+    leftArm.rotation.x = -0.3;
+    leftArm.rotation.z = -0.3;
+    player.add(leftArm);
+    player.leftArm = leftArm;
+
+    if (isMaleSage) {
+      // Male sage: staff with crystal
+      const staffGeo = new THREE.BoxGeometry(0.06, 1.4, 0.06);
+      const staffMat = new THREE.MeshLambertMaterial({ color: 0x4a3020 });
+      const staff = new THREE.Mesh(staffGeo, staffMat);
+      staff.position.set(0.05, -0.1, 0);
+      rightArm.add(staff);
+      const crystalGeo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+      const crystalMat = new THREE.MeshPhongMaterial({ color: 0x00ffff, emissive: 0x0088aa, shininess: 200 });
+      const crystal = new THREE.Mesh(crystalGeo, crystalMat);
+      crystal.position.set(0.05, 0.65, 0);
+      crystal.rotation.y = Math.PI / 4;
+      crystal.rotation.x = Math.PI / 4;
+      rightArm.add(crystal);
+    } else {
+      // Female sage: enchanted bow (larger, glowing)
+      const bowGroup = new THREE.Group();
+      const bowMat = new THREE.MeshLambertMaterial({ color: 0x4a6080 });
+      const bowMid = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.1, 0.05), bowMat);
+      bowGroup.add(bowMid);
+      const bowUpper = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.4, 0.04), bowMat);
+      bowUpper.position.set(0, 0.28, 0);
+      bowUpper.rotation.z = 0.12;
+      bowGroup.add(bowUpper);
+      const bowLower = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.4, 0.04), bowMat);
+      bowLower.position.set(0, -0.28, 0);
+      bowLower.rotation.z = -0.12;
+      bowGroup.add(bowLower);
+      // Glowing string
+      const stringMat = new THREE.MeshBasicMaterial({ color: 0x44ffff });
+      const bowString = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.8, 0.015), stringMat);
+      bowString.position.z = 0.08;
+      bowGroup.add(bowString);
+      // Enchanted tips
+      const tipMat = new THREE.MeshPhongMaterial({ color: 0x44aaff, emissive: 0x2266aa });
+      const topTip = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.05, 0.05), tipMat);
+      topTip.position.set(0.02, 0.48, 0);
+      bowGroup.add(topTip);
+      const botTip = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.05, 0.05), tipMat);
+      botTip.position.set(-0.02, -0.48, 0);
+      bowGroup.add(botTip);
+      bowGroup.rotation.x = Math.PI / 2;
+      bowGroup.position.set(0, -0.55, 0.1);
+      rightArm.add(bowGroup);
+    }
+
+    // Dummy legs (hidden under robes)
+    const dummyLeg = new THREE.Group();
+    player.add(dummyLeg);
+    player.leftLeg = dummyLeg;
+    const dummyLeg2 = new THREE.Group();
+    player.add(dummyLeg2);
+    player.rightLeg = dummyLeg2;
+
+    player.sword = null;
+    player.shield = null;
+
+    return; // Skip normal model building
+  }
+
+  const isMale = playerGender === 'male';
+  const skinColor = 0xf5cba7;
+  const hairColor = isMale ? 0x2c1810 : 0xc68642;
+  const shirtColor = isMale ? 0x2c3e80 : 0xff7eb3;
+  const pantsColor = isMale ? 0x2c2c2c : 0x34495e;
+  const bootColor = 0x5c3a20;
+
+  // === HEAD (0.5 x 0.5 x 0.5 cube) ===
+  const headGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+  const headMat = new THREE.MeshLambertMaterial({ color: skinColor });
+  const head = new THREE.Mesh(headGeo, headMat);
+  head.position.y = 1.85;
+  head.castShadow = true;
+  player.add(head);
+
+  // Face - front of head
+  // Eyes - small dark boxes
+  const eyeGeo = new THREE.BoxGeometry(0.08, 0.06, 0.02);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x222222 });
+  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+  leftEye.position.set(-0.1, 1.88, 0.26);
+  player.add(leftEye);
+  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+  rightEye.position.set(0.1, 1.88, 0.26);
+  player.add(rightEye);
+
+  // Pupils - white dots
+  const pupilGeo = new THREE.BoxGeometry(0.04, 0.04, 0.02);
+  const pupilMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const lPupil = new THREE.Mesh(pupilGeo, pupilMat);
+  lPupil.position.set(-0.08, 1.89, 0.27);
+  player.add(lPupil);
+  const rPupil = new THREE.Mesh(pupilGeo, pupilMat);
+  rPupil.position.set(0.12, 1.89, 0.27);
+  player.add(rPupil);
+
+  // Mouth
+  const mouthGeo = new THREE.BoxGeometry(0.14, 0.04, 0.02);
+  const mouthMat = new THREE.MeshBasicMaterial({ color: 0x8b5555 });
+  const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+  mouth.position.set(0, 1.72, 0.26);
+  player.add(mouth);
+
+  // === HAIR ===
+  if (isMale) {
+    // Blocky spiky top hair
+    const hairTopGeo = new THREE.BoxGeometry(0.54, 0.15, 0.54);
+    const hairMat = new THREE.MeshLambertMaterial({ color: hairColor });
+    const hairTop = new THREE.Mesh(hairTopGeo, hairMat);
+    hairTop.position.y = 2.17;
+    hairTop.castShadow = true;
+    player.add(hairTop);
+    // Spikes - 3 boxes sticking up
+    const spikeGeo = new THREE.BoxGeometry(0.12, 0.2, 0.12);
+    [[-0.15, 2.35, -0.05], [0.0, 2.38, 0.0], [0.15, 2.33, -0.08]].forEach(([sx, sy, sz]) => {
+      const spike = new THREE.Mesh(spikeGeo, hairMat);
+      spike.position.set(sx, sy, sz);
+      spike.rotation.z = (sx) * 0.3;
+      spike.castShadow = true;
+      player.add(spike);
+    });
+  } else {
+    // Long blocky hair
+    const hairMat = new THREE.MeshLambertMaterial({ color: hairColor });
+    const hairTopGeo = new THREE.BoxGeometry(0.56, 0.12, 0.56);
+    const hairTop = new THREE.Mesh(hairTopGeo, hairMat);
+    hairTop.position.y = 2.16;
+    hairTop.castShadow = true;
+    player.add(hairTop);
+    // Side hair blocks
+    const sideHairGeo = new THREE.BoxGeometry(0.12, 0.6, 0.2);
+    const leftSide = new THREE.Mesh(sideHairGeo, hairMat);
+    leftSide.position.set(-0.3, 1.65, 0);
+    leftSide.castShadow = true;
+    player.add(leftSide);
+    const rightSide = new THREE.Mesh(sideHairGeo, hairMat);
+    rightSide.position.set(0.3, 1.65, 0);
+    rightSide.castShadow = true;
+    player.add(rightSide);
+    // Back hair
+    const backHairGeo = new THREE.BoxGeometry(0.5, 0.8, 0.15);
+    const backHair = new THREE.Mesh(backHairGeo, hairMat);
+    backHair.position.set(0, 1.5, -0.28);
+    backHair.castShadow = true;
+    player.add(backHair);
+  }
+
+  // === TORSO (0.5 x 0.7 x 0.3 box) ===
+  const torsoGeo = new THREE.BoxGeometry(0.5, 0.7, 0.3);
+  const torsoMat = new THREE.MeshLambertMaterial({ color: shirtColor });
+  const torso = new THREE.Mesh(torsoGeo, torsoMat);
+  torso.position.y = 1.25;
+  torso.castShadow = true;
+  player.add(torso);
+
+  // Belt
+  const beltGeo = new THREE.BoxGeometry(0.52, 0.06, 0.32);
+  const beltMat = new THREE.MeshLambertMaterial({ color: 0x5c3317 });
+  const belt = new THREE.Mesh(beltGeo, beltMat);
+  belt.position.y = 0.92;
+  belt.castShadow = true;
+  player.add(belt);
+
+  // Belt buckle
+  const buckleGeo = new THREE.BoxGeometry(0.1, 0.08, 0.04);
+  const buckleMat = new THREE.MeshLambertMaterial({ color: 0xdaa520 });
+  const buckle = new THREE.Mesh(buckleGeo, buckleMat);
+  buckle.position.set(0, 0.92, 0.18);
+  player.add(buckle);
+
+  // === LEGS (each 0.2 x 0.7 x 0.25) ===
+  const legGeo = new THREE.BoxGeometry(0.2, 0.45, 0.25);
+  const legMat = new THREE.MeshLambertMaterial({ color: pantsColor });
+  const bootGeo = new THREE.BoxGeometry(0.22, 0.3, 0.28);
+  const bootMat = new THREE.MeshLambertMaterial({ color: bootColor });
+
+  // Left leg group
+  const leftLegGroup = new THREE.Group();
+  const leftLegUpper = new THREE.Mesh(legGeo, legMat);
+  leftLegUpper.position.y = -0.22;
+  leftLegUpper.castShadow = true;
+  leftLegGroup.add(leftLegUpper);
+  const leftBoot = new THREE.Mesh(bootGeo, bootMat);
+  leftBoot.position.y = -0.58;
+  leftBoot.castShadow = true;
+  leftLegGroup.add(leftBoot);
+  leftLegGroup.position.set(-0.13, 0.88, 0);
+  player.add(leftLegGroup);
+  player.leftLeg = leftLegGroup;
+
+  // Right leg group
+  const rightLegGroup = new THREE.Group();
+  const rightLegUpper = new THREE.Mesh(legGeo, legMat);
+  rightLegUpper.position.y = -0.22;
+  rightLegUpper.castShadow = true;
+  rightLegGroup.add(rightLegUpper);
+  const rightBoot = new THREE.Mesh(bootGeo, bootMat);
+  rightBoot.position.y = -0.58;
+  rightBoot.castShadow = true;
+  rightLegGroup.add(rightBoot);
+  rightLegGroup.position.set(0.13, 0.88, 0);
+  player.add(rightLegGroup);
+  player.rightLeg = rightLegGroup;
+
+  // === ARMS (each 0.18 x 0.55 x 0.18) ===
+  const armGeo = new THREE.BoxGeometry(0.18, 0.3, 0.18);
+  const armSleeveMat = new THREE.MeshLambertMaterial({ color: shirtColor });
+  const forearmGeo = new THREE.BoxGeometry(0.16, 0.28, 0.16);
+  const skinMat = new THREE.MeshLambertMaterial({ color: skinColor });
+  const handGeo = new THREE.BoxGeometry(0.14, 0.14, 0.14);
+
+  // Right arm (sword arm)
+  const rightArm = new THREE.Group();
+  const rUpperArm = new THREE.Mesh(armGeo, armSleeveMat);
+  rUpperArm.position.y = -0.15;
+  rUpperArm.castShadow = true;
+  rightArm.add(rUpperArm);
+  const rForearm = new THREE.Mesh(forearmGeo, skinMat);
+  rForearm.position.y = -0.42;
+  rForearm.castShadow = true;
+  rightArm.add(rForearm);
+  const rHand = new THREE.Mesh(handGeo, skinMat);
+  rHand.position.y = -0.6;
+  rightArm.add(rHand);
+
+  rightArm.position.set(-0.34, 1.56, 0);
+  rightArm.rotation.x = -1.4;
+  rightArm.rotation.z = 0.2;
+  rightArm.castShadow = true;
+  player.add(rightArm);
+  player.rightArm = rightArm;
+
+  // Left arm (shield arm)
+  const leftArm = new THREE.Group();
+  const lUpperArm = new THREE.Mesh(armGeo, armSleeveMat);
+  lUpperArm.position.y = -0.15;
+  lUpperArm.castShadow = true;
+  leftArm.add(lUpperArm);
+  const lForearm = new THREE.Mesh(forearmGeo, skinMat);
+  lForearm.position.y = -0.42;
+  lForearm.castShadow = true;
+  leftArm.add(lForearm);
+  const lHand = new THREE.Mesh(handGeo, skinMat);
+  lHand.position.y = -0.6;
+  leftArm.add(lHand);
+
+  leftArm.position.set(0.34, 1.56, 0);
+  leftArm.rotation.x = -0.15;
+  leftArm.rotation.z = -0.15;
+  leftArm.castShadow = true;
+  player.add(leftArm);
+  player.leftArm = leftArm;
+
+  // === GENDER-BASED WEAPONS ===
+  if (isMale) {
+    // === SWORD (blocky Minecraft style) ===
+    const swordGroup = new THREE.Group();
+
+    // Handle (brown box)
+    const sHandleGeo = new THREE.BoxGeometry(0.06, 0.22, 0.06);
+    const sHandleMat = new THREE.MeshLambertMaterial({ color: 0x5c3317 });
+    const sHandle = new THREE.Mesh(sHandleGeo, sHandleMat);
+    sHandle.position.y = 0;
+    swordGroup.add(sHandle);
+
+    // Guard (gold cross)
+    const sGuardGeo = new THREE.BoxGeometry(0.22, 0.06, 0.06);
+    const sGuardMat = new THREE.MeshLambertMaterial({ color: 0xdaa520 });
+    const sGuard = new THREE.Mesh(sGuardGeo, sGuardMat);
+    sGuard.position.y = 0.14;
+    swordGroup.add(sGuard);
+
+    // Blade (light gray tall box)
+    const sBladeGeo = new THREE.BoxGeometry(0.08, 0.7, 0.04);
+    const sBladeMat = new THREE.MeshPhongMaterial({ color: 0xcccccc, shininess: 100, specular: 0xffffff });
+    const sBlade = new THREE.Mesh(sBladeGeo, sBladeMat);
+    sBlade.position.y = 0.52;
+    sBlade.castShadow = true;
+    swordGroup.add(sBlade);
+
+    // Blade tip (smaller box)
+    const sTipGeo = new THREE.BoxGeometry(0.06, 0.1, 0.04);
+    const sTip = new THREE.Mesh(sTipGeo, sBladeMat);
+    sTip.position.y = 0.92;
+    swordGroup.add(sTip);
+
+    // Gem on guard
+    const sGemGeo = new THREE.BoxGeometry(0.06, 0.06, 0.06);
+    const sGemMat = new THREE.MeshPhongMaterial({ color: 0x00ccff, emissive: 0x006699 });
+    const sGem = new THREE.Mesh(sGemGeo, sGemMat);
+    sGem.position.set(0, 0.14, 0.05);
+    swordGroup.add(sGem);
+
+    swordGroup.rotation.x = Math.PI / 2;
+    swordGroup.rotation.y = Math.PI;
+    swordGroup.position.set(0, -0.6, 0.1);
+    rightArm.add(swordGroup);
+    player.sword = swordGroup;
+
+    // === SHIELD (blocky) ===
+    const shieldGroup = new THREE.Group();
+
+    // Shield body
+    const shBodyGeo = new THREE.BoxGeometry(0.35, 0.45, 0.06);
+    const shBodyMat = new THREE.MeshLambertMaterial({ color: 0x1a3a8a });
+    const shBody = new THREE.Mesh(shBodyGeo, shBodyMat);
+    shBody.castShadow = true;
+    shieldGroup.add(shBody);
+
+    // Shield border
+    const shBorderGeo = new THREE.BoxGeometry(0.39, 0.49, 0.04);
+    const shBorderMat = new THREE.MeshLambertMaterial({ color: 0xdaa520 });
+    const shBorder = new THREE.Mesh(shBorderGeo, shBorderMat);
+    shBorder.position.z = -0.02;
+    shieldGroup.add(shBorder);
+
+    // Shield emblem - cross
+    const shCrossV = new THREE.Mesh(
+      new THREE.BoxGeometry(0.06, 0.22, 0.02),
+      new THREE.MeshLambertMaterial({ color: 0xffd700 })
+    );
+    shCrossV.position.z = 0.04;
+    shieldGroup.add(shCrossV);
+    const shCrossH = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.06, 0.02),
+      new THREE.MeshLambertMaterial({ color: 0xffd700 })
+    );
+    shCrossH.position.z = 0.04;
+    shieldGroup.add(shCrossH);
+
+    // Shield gem
+    const shGem = new THREE.Mesh(
+      new THREE.BoxGeometry(0.06, 0.06, 0.04),
+      new THREE.MeshPhongMaterial({ color: 0xff4444, emissive: 0x660000 })
+    );
+    shGem.position.z = 0.05;
+    shieldGroup.add(shGem);
+
+    shieldGroup.position.set(0, -0.4, 0.2);
+    leftArm.add(shieldGroup);
+    player.shield = shieldGroup;
+  } else {
+    // === BOW (on right hand for female) ===
+    const bowGroup = new THREE.Group();
+
+    // Bow body - curved shape using boxes
+    const bowMidGeo = new THREE.BoxGeometry(0.04, 0.08, 0.04);
+    const bowMat = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+    const bowMid = new THREE.Mesh(bowMidGeo, bowMat);
+    bowGroup.add(bowMid);
+
+    // Upper limb
+    const bowUpperGeo = new THREE.BoxGeometry(0.04, 0.35, 0.04);
+    const bowUpper = new THREE.Mesh(bowUpperGeo, bowMat);
+    bowUpper.position.set(0, 0.22, 0);
+    bowUpper.rotation.z = 0.15;
+    bowGroup.add(bowUpper);
+
+    // Lower limb
+    const bowLowerGeo = new THREE.BoxGeometry(0.04, 0.35, 0.04);
+    const bowLower = new THREE.Mesh(bowLowerGeo, bowMat);
+    bowLower.position.set(0, -0.22, 0);
+    bowLower.rotation.z = -0.15;
+    bowGroup.add(bowLower);
+
+    // Bow string - thin box
+    const stringGeo = new THREE.BoxGeometry(0.01, 0.7, 0.01);
+    const stringMat = new THREE.MeshBasicMaterial({ color: 0xcccccc });
+    const bowString = new THREE.Mesh(stringGeo, stringMat);
+    bowString.position.z = 0.06;
+    bowGroup.add(bowString);
+
+    // Bow tips
+    const tipGeo = new THREE.BoxGeometry(0.06, 0.04, 0.04);
+    const tipMat = new THREE.MeshLambertMaterial({ color: 0xdaa520 });
+    const topTip = new THREE.Mesh(tipGeo, tipMat);
+    topTip.position.set(0.02, 0.4, 0);
+    bowGroup.add(topTip);
+    const botTip = new THREE.Mesh(tipGeo, tipMat);
+    botTip.position.set(-0.02, -0.4, 0);
+    bowGroup.add(botTip);
+
+    bowGroup.rotation.x = Math.PI / 2;
+    bowGroup.position.set(0, -0.6, 0.1);
+    rightArm.add(bowGroup);
+    player.sword = bowGroup; // reuse sword reference for animation
+
+    // === QUIVER on back ===
+    const quiverGroup = new THREE.Group();
+    const quiverGeo = new THREE.BoxGeometry(0.1, 0.4, 0.08);
+    const quiverMat = new THREE.MeshLambertMaterial({ color: 0x5c3317 });
+    const quiver = new THREE.Mesh(quiverGeo, quiverMat);
+    quiverGroup.add(quiver);
+
+    // Arrow tips sticking out
+    for (let i = 0; i < 3; i++) {
+      const arrowTipGeo = new THREE.BoxGeometry(0.02, 0.12, 0.02);
+      const arrowTipMat = new THREE.MeshLambertMaterial({ color: 0xcccccc });
+      const arrowTip = new THREE.Mesh(arrowTipGeo, arrowTipMat);
+      arrowTip.position.set(-0.03 + i * 0.03, 0.26, 0);
+      quiverGroup.add(arrowTip);
+    }
+
+    quiverGroup.position.set(0, 1.3, -0.22);
+    player.add(quiverGroup);
+
+    // No shield for female - left arm stays empty for now
+    player.shield = null;
+  }
+}
+
+// ============ SLIMES ============
+function createSlime(x, z) {
+  const slime = new THREE.Group();
+  const y = getTerrainHeight(x, z);
+
+  // Body - slightly squished sphere (smaller scale 0.7)
+  const bodyGeo = new THREE.SphereGeometry(0.6, 12, 10);
+  const bodyMat = new THREE.MeshPhongMaterial({
+    color: 0xff88aa,
+    transparent: true,
+    opacity: 0.85,
+    shininess: 120,
+    specular: 0xffffff,
+    emissive: 0x331122
+  });
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.scale.set(0.7, 0.525, 0.7);  // scaled down to 0.7
+  body.position.y = 0.413;  // adjusted for smaller size
+  body.castShadow = true;
+  slime.add(body);
+
+  // Inner glow (scaled with body)
+  const innerGeo = new THREE.SphereGeometry(0.35, 8, 8);
+  const innerMat = new THREE.MeshBasicMaterial({
+    color: 0xffccdd,
+    transparent: true,
+    opacity: 0.4
+  });
+  const inner = new THREE.Mesh(innerGeo, innerMat);
+  inner.scale.set(0.7, 0.7, 0.7);
+  inner.position.y = 0.455;
+  slime.add(inner);
+
+  // Eyes (scaled for smaller slime)
+  const eyeGeo = new THREE.SphereGeometry(0.1, 8, 8);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x222222 });
+  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+  leftEye.scale.set(0.7, 0.7, 0.7);
+  leftEye.position.set(-0.126, 0.42, 0.294);
+  slime.add(leftEye);
+  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+  rightEye.scale.set(0.7, 0.7, 0.7);
+  rightEye.position.set(0.126, 0.42, 0.294);
+  slime.add(rightEye);
+
+  // Cute mouth (scaled for smaller slime)
+  const mouthGeo = new THREE.TorusGeometry(0.08, 0.02, 8, 8, Math.PI);
+  const mouthMat = new THREE.MeshBasicMaterial({ color: 0x333333 });
+  const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+  mouth.scale.set(0.7, 0.7, 0.7);
+  mouth.position.set(0, 0.294, 0.336);
+  mouth.rotation.x = Math.PI;
+  slime.add(mouth);
+
+  slime.position.set(x, y, z);
+  slime.userData = {
+    hp: 1,
+    maxHp: 1,
+    alive: true,
+    baseY: y,
+    bouncePhase: Math.random() * Math.PI * 2,
+    speed: 1.8 + Math.random() * 1.2,
+    knockbackVel: new THREE.Vector3(0, 0, 0),
+    patrolCenter: new THREE.Vector3(x, y, z),
+    patrolRadius: 5 + Math.random() * 5,
+    patrolAngle: Math.random() * Math.PI * 2,
+    state: 'patrol', // patrol, chase
+    hitFlash: 0,
+    deathTimer: 0
+  };
+
+  // HP bar (hidden)
+  slime.userData.hpBar = null;
+  slime.userData.hpBarBg = null;
+  slime.userData.hpGroup = null;
+
+  scene.add(slime);
+  slimes.push(slime);
+}
+
+function createSlimes() {
+  // Spawn 1600 slimes across map in clusters
+  const clusterCount = 80;
+  let totalCreated = 0;
+  for (let c = 0; c < clusterCount; c++) {
+    const cx = (Math.random() - 0.5) * 170;
+    const cz = (Math.random() - 0.5) * 170;
+    const count = 20;
+    for (let i = 0; i < count; i++) {
+      const offsetX = (Math.random() - 0.5) * 18;
+      const offsetZ = (Math.random() - 0.5) * 18;
+      createSlime(cx + offsetX, cz + offsetZ);
+      totalCreated++;
+    }
+  }
+  totalSlimes = totalCreated;
+}
+
+// ============ INPUT ============
+function onMouseMove(e) {
+  if (!isPointerLocked || !gameStarted) return;
+  cameraAngleX -= e.movementX * 0.003;
+  cameraAngleY += e.movementY * 0.003;
+  cameraAngleY = Math.max(-0.5, Math.min(1.2, cameraAngleY));
+}
+
+function triggerAttack() {
+  if (isSage || isGrand) return; // Sage/Grand auto-attacks, no manual attacks needed
+  if (isBlocking) return;
+
+  if (playerGender === 'female') {
+    // Bow attack - shoot homing arrow
+    if (arrowCooldown <= 0) {
+      shootArrow();
+      arrowCooldown = ARROW_COOLDOWN;
+      isAttacking = true;
+      attackTimer = 0.2;
+      // Arm animation for drawing bow
+      if (player.rightArm) {
+        player.rightArm.rotation.x = -1.8;
+      }
+      AudioSystem.playSlash1(); // reuse whoosh sound
+    }
+    return;
+  }
+
+  // Male: existing combo system
+  if (comboStep === 0 && attackCooldown <= 0) {
+    // Start combo - first slash
+    comboStep = 1;
+    isAttacking = true;
+    attackTimer = COMBO_DURATIONS[0];
+    comboQueued = false;
+    AudioSystem.playSlash1();
+  } else if (comboStep > 0 && comboStep < 3 && attackTimer > 0) {
+    // Queue next hit during current swing
+    comboQueued = true;
+  }
+}
+
+function shootArrow() {
+  const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.quaternion);
+  const right = new THREE.Vector3(-forward.z, 0, forward.x);
+
+  // Find up to 5 slimes in front of player for targeting
+  const targets = [];
+  slimes.forEach(slime => {
+    if (!slime.userData.alive) return;
+    const dist = player.position.distanceTo(slime.position);
+    if (dist < 50) {
+      const toSlime = new THREE.Vector3().subVectors(slime.position, player.position).normalize();
+      const dot = forward.dot(toSlime);
+      if (dot > -0.3) {
+        targets.push({ slime, dist });
+      }
+    }
+  });
+  targets.sort((a, b) => a.dist - b.dist);
+
+  // 5 arrows in fan pattern: -30, -15, 0, +15, +30 degrees
+  const fanAngles = [-0.5, -0.25, 0, 0.25, 0.5]; // radians spread
+
+  fanAngles.forEach((angle, idx) => {
+    const arrowGroup = new THREE.Group();
+
+    // Shaft
+    const shaftGeo = new THREE.BoxGeometry(0.03, 0.03, 0.5);
+    const shaftMat = new THREE.MeshLambertMaterial({ color: 0x8B6914 });
+    const shaft = new THREE.Mesh(shaftGeo, shaftMat);
+    arrowGroup.add(shaft);
+
+    // Arrowhead
+    const headGeo = new THREE.BoxGeometry(0.06, 0.06, 0.12);
+    const headMat = new THREE.MeshPhongMaterial({ color: 0xcccccc, shininess: 80 });
+    const arrowHead = new THREE.Mesh(headGeo, headMat);
+    arrowHead.position.z = 0.3;
+    arrowGroup.add(arrowHead);
+
+    // Fletching
+    const fletchGeo = new THREE.BoxGeometry(0.08, 0.01, 0.1);
+    const fletchMat = new THREE.MeshLambertMaterial({ color: 0xff4444 });
+    const fletch1 = new THREE.Mesh(fletchGeo, fletchMat);
+    fletch1.position.z = -0.2;
+    arrowGroup.add(fletch1);
+    const fletch2 = new THREE.Mesh(fletchGeo.clone(), fletchMat);
+    fletch2.position.z = -0.2;
+    fletch2.rotation.z = Math.PI / 2;
+    arrowGroup.add(fletch2);
+
+    // Trail glow
+    const glowGeo = new THREE.BoxGeometry(0.04, 0.04, 0.3);
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0x88ccff, transparent: true, opacity: 0.4 });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    glow.position.z = -0.3;
+    arrowGroup.add(glow);
+
+    // Position at player
+    const spawnPos = player.position.clone();
+    spawnPos.y += 1.5;
+    spawnPos.add(forward.clone().multiplyScalar(0.5));
+    arrowGroup.position.copy(spawnPos);
+
+    // Fan direction: rotate forward vector by angle around Y axis
+    const dir = forward.clone();
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const newX = dir.x * cos - dir.z * sin;
+    const newZ = dir.x * sin + dir.z * cos;
+    dir.x = newX;
+    dir.z = newZ;
+    dir.y = 0.05;
+    dir.normalize();
+
+    arrowGroup.lookAt(spawnPos.x + dir.x, spawnPos.y + dir.y, spawnPos.z + dir.z);
+
+    // Assign target: each arrow targets a different slime if available
+    const target = idx < targets.length ? targets[idx].slime : (targets.length > 0 ? targets[0].slime : null);
+
+    scene.add(arrowGroup);
+    arrowList.push({
+      mesh: arrowGroup,
+      velocity: dir.multiplyScalar(ARROW_SPEED),
+      target: target,
+      life: ARROW_LIFETIME,
+      hasHit: false
+    });
+  });
+}
+
+function onMouseDown(e) {
+  if (!gameStarted || isDead) return;
+  if (e.button === 0) { // Left click - attack
+    triggerAttack();
+  } else if (e.button === 2) { // Right click - block
+    isBlocking = true;
+  }
+}
+
+function onMouseUp(e) {
+  if (e.button === 2) {
+    isBlocking = false;
+  }
+}
+
+// ============ UPDATE ============
+function updatePlayer(dt) {
+  if (!gameStarted || isDead) return;
+
+  // Check death
+  if (playerHP <= 0) {
+    isDead = true;
+    // Clean up arrows
+    arrowList.forEach(a => scene.remove(a.mesh));
+    arrowList = [];
+    arrowCooldown = 0;
+    document.getElementById('deathScreen').style.display = 'flex';
+    AudioSystem.playDeath();
+    AudioSystem.stopAllMusic();
+    if (document.pointerLockElement) document.exitPointerLock();
+    return;
+  }
+
+  // Also support J/K keys
+  if (keys['KeyJ']) {
+    keys['KeyJ'] = false;
+    triggerAttack();
+  }
+  if (keys['KeyK']) {
+    isBlocking = true;
+  } else if (!keys['KeyK'] && isBlocking) {
+    // Only release if mouse right is also not held
+  }
+
+  const moveSpeed = 9;
+  let moveX = 0, moveZ = 0;
+  if (keys['KeyW'] || keys['ArrowUp']) moveZ = 1;
+  if (keys['KeyS'] || keys['ArrowDown']) moveZ = -1;
+  if (keys['KeyA'] || keys['ArrowLeft']) moveX = -1;
+  if (keys['KeyD'] || keys['ArrowRight']) moveX = 1;
+
+  const forward = new THREE.Vector3(-Math.sin(cameraAngleX), 0, -Math.cos(cameraAngleX));
+  const right = new THREE.Vector3(-forward.z, 0, forward.x);
+
+  const moveDir = new THREE.Vector3();
+  moveDir.addScaledVector(forward, moveZ);
+  moveDir.addScaledVector(right, moveX);
+
+  let isMoving = false;
+  let dashDir = null;
+
+  if (moveDir.length() > 0) {
+    moveDir.normalize();
+    dashDir = moveDir.clone();
+  }
+
+  // Dash/dodge on Shift
+  let isDashing = false;
+  if (keys['ShiftLeft'] || keys['ShiftRight']) {
+    if (dashCooldown <= 0 && dashDir) {
+      isDashing = true;
+      dashCooldown = DASH_COOLDOWN;
+      keys['ShiftLeft'] = false;
+      keys['ShiftRight'] = false;
+      AudioSystem.playDash();
+    }
+  }
+
+  if (isDashing) {
+    player.position.x += dashDir.x * DASH_SPEED * DASH_DURATION;
+    player.position.z += dashDir.z * DASH_SPEED * DASH_DURATION;
+  } else if (moveDir.length() > 0) {
+    moveDir.normalize();
+    player.position.x += moveDir.x * moveSpeed * dt;
+    player.position.z += moveDir.z * moveSpeed * dt;
+    // Face movement direction
+    player.rotation.y = Math.atan2(moveDir.x, moveDir.z);
+    isMoving = true;
+  }
+
+  // Jump
+  if ((keys['Space']) && isGrounded) {
+    playerVelocityY = JUMP_FORCE;
+    isGrounded = false;
+  }
+
+  // Gravity
+  playerVelocityY += GRAVITY * dt;
+  player.position.y += playerVelocityY * dt;
+
+  const terrainY = getTerrainHeight(player.position.x, player.position.z);
+  if (player.position.y <= terrainY) {
+    player.position.y = terrainY;
+    playerVelocityY = 0;
+    isGrounded = true;
+  }
+
+  // Clamp to terrain bounds
+  player.position.x = Math.max(-90, Math.min(90, player.position.x));
+  player.position.z = Math.max(-90, Math.min(90, player.position.z));
+
+  // Leg animation
+  if (isMoving && isGrounded) {
+    const legSwing = Math.sin(clock.elapsedTime * 8) * 0.4;
+    if (player.leftLeg) player.leftLeg.rotation.x = legSwing;
+    if (player.rightLeg) player.rightLeg.rotation.x = -legSwing;
+  } else {
+    if (player.leftLeg) player.leftLeg.rotation.x *= 0.9;
+    if (player.rightLeg) player.rightLeg.rotation.x *= 0.9;
+  }
+
+  // Idle pose constants
+  const R_IDLE_X = -1.4;
+  const R_IDLE_Z = 0.2;
+  const L_IDLE_X = -0.15;
+  const L_IDLE_Z = -0.15;
+
+  // ---- ATTACK SYSTEM ----
+  if (attackTimer > 0) {
+    const prevTimer = attackTimer;
+    attackTimer -= dt;
+
+    if (isSage || isGrand) {
+      // Sage/Grand doesn't do manual attacks
+      attackTimer = 0;
+      isAttacking = false;
+    } else if (playerGender === 'female') {
+      // Female: simple bow draw and release
+      if (player.rightArm) {
+        player.rightArm.rotation.x = -1.8; // held at drawn position
+      }
+      // No combo system or hit detection for bow
+    } else {
+      // Male: COMBO ATTACK SYSTEM (3-hit chain, faster)
+      const dur = COMBO_DURATIONS[comboStep - 1] || 0.25;
+      const p = 1 - (attackTimer / dur); // progress 0→1
+
+      if (player.rightArm) {
+        const arc = Math.sin(p * Math.PI);
+
+        if (comboStep === 1) {
+          // COMBO 1: Diagonal slash
+          player.rightArm.rotation.x = R_IDLE_X - arc * 0.8;
+          player.rightArm.rotation.z = R_IDLE_Z + arc * 0.7;
+          player.rightArm.rotation.y = arc * 0.5;
+        } else if (comboStep === 2) {
+          // COMBO 2: Horizontal sweep (wider arc)
+          player.rightArm.rotation.x = R_IDLE_X - 0.2;
+          player.rightArm.rotation.z = R_IDLE_Z - arc * 1.6;
+          player.rightArm.rotation.y = -arc * 1.1;
+        } else if (comboStep === 3) {
+          // COMBO 3: Heavy overhead slam
+          const windUp = Math.min(p / 0.3, 1);
+          const slam = Math.max((p - 0.3) / 0.7, 0);
+          if (p < 0.3) {
+            player.rightArm.rotation.x = R_IDLE_X + windUp * 1.8;
+            player.rightArm.rotation.z = R_IDLE_Z + windUp * 0.2;
+            player.rightArm.rotation.y = 0;
+          } else {
+            const slamArc = Math.sin(slam * Math.PI * 0.7);
+            player.rightArm.rotation.x = (R_IDLE_X + 1.8) - slamArc * 3.8;
+            player.rightArm.rotation.z = R_IDLE_Z + 0.2 - slamArc * 0.2;
+            player.rightArm.rotation.y = 0;
+          }
+        }
+      }
+
+      // Hit detection at peak of each swing
+      if (p > 0.3 && p < 0.6) {
+        checkAttackHit();
+      }
+
+      // Spawn sword qi on every attack (not just at peak)
+      const prevP = 1 - (prevTimer / dur);
+      if (p >= 0.4 && prevP < 0.4) {
+        spawnSwordQi();
+      }
+
+      // When current attack ends
+      if (attackTimer <= 0) {
+        if (comboQueued && comboStep < 3) {
+          comboStep++;
+          attackTimer = COMBO_DURATIONS[comboStep - 1];
+          comboQueued = false;
+          if (comboStep === 2) AudioSystem.playSlash2();
+          else if (comboStep === 3) AudioSystem.playSlash3();
+        } else {
+          comboStep = 0;
+          isAttacking = false;
+          attackCooldown = 0.2;
+          comboQueued = false;
+        }
+      }
+    }
+  } else {
+    isAttacking = false;
+    if (isSage || isGrand) {
+      const floatAnim = Math.sin(clock.elapsedTime * 2) * 0.15;
+      if (player.rightArm) {
+        player.rightArm.rotation.x = -0.3 + floatAnim;
+        player.rightArm.rotation.z = 0.3;
+      }
+      if (player.leftArm) {
+        player.leftArm.rotation.x = -0.3 - floatAnim;
+        player.leftArm.rotation.z = -0.3;
+      }
+    } else if (player.rightArm) {
+      player.rightArm.rotation.x += (R_IDLE_X - player.rightArm.rotation.x) * 0.12;
+      player.rightArm.rotation.y *= 0.85;
+      player.rightArm.rotation.z += (R_IDLE_Z - player.rightArm.rotation.z) * 0.12;
+    }
+  }
+
+  // Block animation
+  if (isBlocking) {
+    if (!wasBlocking) {
+      AudioSystem.playBlock();
+      wasBlocking = true;
+    }
+    if (player.leftArm) {
+      player.leftArm.rotation.x = THREE.MathUtils.lerp(player.leftArm.rotation.x, -1.5, 0.18);
+      player.leftArm.rotation.z = THREE.MathUtils.lerp(player.leftArm.rotation.z, -0.1, 0.18);
+    }
+    document.getElementById('blockIndicator').style.display = 'block';
+  } else {
+    wasBlocking = false;
+    if (player.leftArm) {
+      player.leftArm.rotation.x += (L_IDLE_X - player.leftArm.rotation.x) * 0.12;
+      player.leftArm.rotation.z += (L_IDLE_Z - player.leftArm.rotation.z) * 0.12;
+    }
+    document.getElementById('blockIndicator').style.display = 'none';
+  }
+
+  attackCooldown -= dt;
+  dashCooldown -= dt;
+  if (playerInvincible > 0) playerInvincible -= dt;
+
+  // Combo HUD
+  const comboEl = document.getElementById('comboDisplay');
+  if (comboStep > 0) {
+    const labels = ['', 'SLASH!', 'DOUBLE SLASH!', 'HEAVY SLAM!'];
+    comboEl.textContent = labels[comboStep];
+    comboEl.className = 'active';
+  } else {
+    comboEl.className = '';
+  }
+}
+
+function checkAttackHit() {
+  const playerForward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.quaternion);
+  // Larger attack ranges for musou feel
+  const attackRange = comboStep === 3 ? 4.5 : 3.5;
+  const dmg = COMBO_DAMAGE[comboStep - 1] || 1;
+
+  // Use spatial hash for performance with 200 slimes
+  const playerCellX = Math.floor(player.position.x / SPATIAL_HASH_CELL_SIZE);
+  const playerCellZ = Math.floor(player.position.z / SPATIAL_HASH_CELL_SIZE);
+
+  const checkCells = [];
+  for (let dx = -2; dx <= 2; dx++) {
+    for (let dz = -2; dz <= 2; dz++) {
+      const key = (playerCellX + dx) + ',' + (playerCellZ + dz);
+      if (spatialHash[key]) {
+        checkCells.push(...spatialHash[key]);
+      }
+    }
+  }
+
+  let hitCount = 0;
+  checkCells.forEach(slime => {
+    if (!slime.userData.alive) return;
+    const dist = player.position.distanceTo(slime.position);
+    if (dist < attackRange) {
+      const toSlime = new THREE.Vector3().subVectors(slime.position, player.position).normalize();
+      const dot = playerForward.dot(toSlime);
+      // Wider arcs for more hits
+      const arcThreshold = comboStep === 2 ? 0.05 : 0.25;
+      if (dot > arcThreshold) {
+        damageSlime(slime, dmg, comboStep);
+        hitCount++;
+      }
+    }
+  });
+
+  // Hit feedback on successful hits
+  if (hitCount > 0) {
+    const isHeavy = comboStep === 3;
+    hitStopTimer = isHeavy ? 0.08 : 0.03;
+    screenShakeIntensity = isHeavy ? 0.15 : 0.08;
+    comboCounter += hitCount;
+    comboResetTimer = 3.0;
+  }
+}
+
+function damageSlime(slime, amount, comboStep) {
+  if (slime.userData.hitFlash > 0) return;
+  slime.userData.hp -= amount;
+  slime.userData.hitFlash = 0.25;
+
+  // Knockback effect
+  const playerToSlime = new THREE.Vector3().subVectors(slime.position, player.position).normalize();
+  const knockbackDist = comboStep === 3 ? 15 : 10;
+  slime.userData.knockbackVel.copy(playerToSlime).multiplyScalar(knockbackDist);
+
+  // Spawn hit particles
+  spawnHitParticles(slime.position.clone(), playerToSlime);
+
+  AudioSystem.playHit();
+
+  if (slime.userData.hp <= 0) {
+    slime.userData.alive = false;
+    slime.userData.deathTimer = 1.0;
+    slimesDefeated++;
+    showKOFlash();
+    updateSlimeCounter();
+    AudioSystem.playKill();
+
+    // Check sage unlock
+    if (slimesDefeated >= SAGE_UNLOCK_KILLS && !isSage && !isGrand) {
+      unlockSage();
+    }
+    // Check grand unlock
+    if (slimesDefeated >= GRAND_UNLOCK_KILLS && isSage && !isGrand) {
+      unlockGrand();
+    }
+  }
+}
+
+function showUpgradeToast(title, subtitle, isGrandStyle) {
+  const toast = document.getElementById('upgradeToast');
+  toast.querySelector('h1').textContent = title;
+  toast.querySelector('p').textContent = subtitle;
+  toast.className = isGrandStyle ? 'grand show' : 'show';
+  setTimeout(() => { toast.className = isGrandStyle ? 'grand hide' : 'hide'; }, 2500);
+  setTimeout(() => { toast.className = ''; }, 3000);
+}
+
+function unlockSage() {
+  isSage = true;
+  sageUnlockShown = true;
+
+  // Show toast notification
+  showUpgradeToast('SAGE AWAKENED', 'The power of the ancients flows through you', false);
+  setTimeout(() => { sageUnlockShown = false; }, 3000);
+
+  // Update HUD label
+  document.getElementById('charLabel').textContent =
+    playerGender === 'male' ? 'SAGE' : 'SAGE';
+
+  // Rebuild model as sage
+  buildPlayerModel();
+
+  // Create lightning orbs (male sage only)
+  if (playerGender === 'male') {
+    createLightningOrbs();
+  }
+
+  // Screen shake for dramatic effect
+  screenShakeIntensity = 0.3;
+
+  // Play special sound
+  AudioSystem.playDeath(); // reuse dramatic sound
+}
+
+function unlockGrand() {
+  isGrand = true;
+  grandUnlockShown = true;
+
+  // Remove old lightning orbs (male sage had them)
+  lightningOrbs.forEach(orb => scene.remove(orb.mesh));
+  lightningOrbs = [];
+
+  // Show toast notification
+  if (playerGender === 'male') {
+    showUpgradeToast('GRAND POPE', 'The heavens answer your call', true);
+  } else {
+    showUpgradeToast('GRAND SAINT MOTHER', 'Divine light purifies all', true);
+  }
+  setTimeout(() => { grandUnlockShown = false; }, 3000);
+
+  // Update HUD label
+  document.getElementById('charLabel').textContent =
+    playerGender === 'male' ? 'GRAND POPE' : 'GRAND SAINT MOTHER';
+
+  // Rebuild model
+  buildPlayerModel();
+
+  // Big screen shake
+  screenShakeIntensity = 0.5;
+  AudioSystem.playDeath();
+}
+
+function createLightningOrbs() {
+  // Remove existing orbs
+  lightningOrbs.forEach(orb => scene.remove(orb.mesh));
+  lightningOrbs = [];
+
+  for (let i = 0; i < LIGHTNING_ORB_COUNT; i++) {
+    const orbGroup = new THREE.Group();
+
+    // Core
+    const coreGeo = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0xffff44 });
+    const core = new THREE.Mesh(coreGeo, coreMat);
+    orbGroup.add(core);
+
+    // Outer glow
+    const glowGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+    const glowMat = new THREE.MeshBasicMaterial({
+      color: 0x88aaff,
+      transparent: true,
+      opacity: 0.4
+    });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    orbGroup.add(glow);
+
+    // Lightning sparks (small boxes at random angles)
+    for (let s = 0; s < 4; s++) {
+      const sparkGeo = new THREE.BoxGeometry(0.03, 0.15, 0.03);
+      const sparkMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 });
+      const spark = new THREE.Mesh(sparkGeo, sparkMat);
+      spark.position.set(
+        (Math.random() - 0.5) * 0.2,
+        (Math.random() - 0.5) * 0.2,
+        (Math.random() - 0.5) * 0.2
+      );
+      spark.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      orbGroup.add(spark);
+    }
+
+    scene.add(orbGroup);
+    lightningOrbs.push({
+      mesh: orbGroup,
+      angleOffset: (i / LIGHTNING_ORB_COUNT) * Math.PI * 2,
+      attackTimer: 0
+    });
+  }
+}
+
+function spawnHitParticles(hitPos, direction) {
+  const particleCount = 8;
+  for (let i = 0; i < particleCount; i++) {
+    const particle = createHitParticle(hitPos.clone(), direction);
+    if (particle) scene.add(particle);
+  }
+}
+
+function createHitParticle(pos, baseDir) {
+  const geo = new THREE.SphereGeometry(0.08, 4, 4);
+  const mat = new THREE.MeshBasicMaterial({
+    color: Math.random() > 0.5 ? 0xffffff : 0xffff00,
+    transparent: true,
+    opacity: 0.8
+  });
+  const particle = new THREE.Mesh(geo, mat);
+  particle.position.copy(pos);
+
+  // Random spread around impact direction
+  const angle = Math.random() * Math.PI * 2;
+  const spread = 0.3 + Math.random() * 0.3;
+  const vel = new THREE.Vector3(
+    baseDir.x + Math.sin(angle) * spread,
+    0.3 + Math.random() * 0.5,
+    baseDir.z + Math.cos(angle) * spread
+  ).normalize().multiplyScalar(12 + Math.random() * 8);
+
+  particle.userData = {
+    vel: vel,
+    lifetime: 0.4,
+    maxLifetime: 0.4
+  };
+
+  particlePool.push(particle);
+  return particle;
+}
+
+function updateParticles(dt) {
+  particlePool = particlePool.filter(p => {
+    if (p.parent) {
+      p.userData.lifetime -= dt;
+      if (p.userData.lifetime <= 0) {
+        scene.remove(p);
+        return false;
+      }
+
+      p.position.add(p.userData.vel.clone().multiplyScalar(dt));
+      p.userData.vel.y -= 15 * dt;  // gravity
+
+      const fade = p.userData.lifetime / p.userData.maxLifetime;
+      p.material.opacity = fade * 0.8;
+      p.scale.multiplyScalar(0.96);
+
+      return true;
+    }
+    return false;
+  });
+}
+
+// ============ SWORD QI (larger, hits more enemies) ============
+function spawnSwordQi() {
+  const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.quaternion);
+  const right = new THREE.Vector3(-forward.z, 0, forward.x);
+  const colors = [0x66ccff, 0x44aaff, 0xff6644];
+  const sizes = [2.2, 3.0, 4.0]; // larger sword qi
+  const dmgs = [1, 1, 2];
+
+  const s = comboStep - 1;
+  const size = sizes[s] || 2.2;
+
+  const qiGroup = new THREE.Group();
+
+  // Create multiple arc trail layers
+  const numLayers = 5;
+  for (let layer = 0; layer < numLayers; layer++) {
+    const t = layer / (numLayers - 1);
+    const layerSize = size * (0.6 + t * 0.4);
+    const segments = 20;
+    const positions = [];
+
+    // Arc trail
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 0.8 - Math.PI * 0.4;
+      const r = layerSize * (0.8 + t * 0.3);
+      const x = Math.sin(angle) * r;
+      const y = Math.cos(angle) * r * 0.5;
+      const thickness = 0.04 + (1 - Math.abs(i / segments - 0.5) * 2) * 0.12 * (1 - t * 0.5);
+
+      positions.push(x, y + thickness, 0);
+      positions.push(x, y - thickness, 0);
+    }
+
+    const geo = new THREE.BufferGeometry();
+    const indices = [];
+    for (let i = 0; i < segments; i++) {
+      const a = i * 2, b = i * 2 + 1, c = i * 2 + 2, d = i * 2 + 3;
+      indices.push(a, b, c, b, d, c);
+    }
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+
+    const mat = new THREE.MeshBasicMaterial({
+      color: t < 0.5 ? 0xffffff : colors[s],
+      transparent: true,
+      opacity: (1 - t) * 0.7,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.z = t * 0.05;
+    qiGroup.add(mesh);
+  }
+
+  // Position at player sword area
+  const spawnPos = player.position.clone();
+  spawnPos.y += 1.5;
+  spawnPos.add(forward.clone().multiplyScalar(0.8));
+  qiGroup.position.copy(spawnPos);
+  qiGroup.lookAt(spawnPos.x + forward.x, spawnPos.y, spawnPos.z + forward.z);
+
+  if (comboStep === 1) {
+    qiGroup.rotation.z += 0.3;
+  } else if (comboStep === 2) {
+    qiGroup.rotation.z += Math.PI * 0.5;
+  } else {
+    qiGroup.rotation.z += 0;
+  }
+
+  scene.add(qiGroup);
+  AudioSystem.playSwordQi();
+  swordQiList.push({
+    mesh: qiGroup,
+    life: 0.4,
+    maxLife: 0.4,
+    damage: dmgs[s] || 1,
+    hasHit: new Set(),
+    center: spawnPos.clone(),
+    radius: size * 1.2
+  });
+}
+
+function updateSwordQi(dt) {
+  for (let i = swordQiList.length - 1; i >= 0; i--) {
+    const qi = swordQiList[i];
+    qi.life -= dt;
+
+    const t = 1 - qi.life / qi.maxLife;
+
+    // Scale up quickly then hold
+    const scale = Math.min(t / 0.2, 1);
+    qi.mesh.scale.set(scale, scale, scale);
+
+    // Fade out
+    qi.mesh.children.forEach(c => {
+      if (c.material) {
+        c.material.opacity = Math.max(0, (qi.life / qi.maxLife)) * 0.7;
+      }
+    });
+
+    // Damage slimes in the slash area (larger radius)
+    if (t < 0.6) {
+      slimes.forEach(slime => {
+        if (!slime.userData.alive) return;
+        if (qi.hasHit.has(slime)) return;
+        const dist = qi.center.distanceTo(slime.position);
+        if (dist < qi.radius + 0.8) {
+          damageSlime(slime, qi.damage);
+          qi.hasHit.add(slime);
+        }
+      });
+    }
+
+    // Remove when expired
+    if (qi.life <= 0) {
+      scene.remove(qi.mesh);
+      swordQiList.splice(i, 1);
+    }
+  }
+}
+
+function updateArrows(dt) {
+  for (let i = arrowList.length - 1; i >= 0; i--) {
+    const arrow = arrowList[i];
+    arrow.life -= dt;
+
+    if (arrow.life <= 0 || arrow.hasHit) {
+      scene.remove(arrow.mesh);
+      arrowList.splice(i, 1);
+      continue;
+    }
+
+    // Homing toward target
+    if (arrow.target && arrow.target.userData.alive) {
+      const targetPos = arrow.target.position.clone();
+      targetPos.y += 0.5; // aim at slime center
+      const toTarget = new THREE.Vector3().subVectors(targetPos, arrow.mesh.position);
+      const dist = toTarget.length();
+      toTarget.normalize();
+
+      // Gradually turn toward target
+      const currentDir = arrow.velocity.clone().normalize();
+      const newDir = currentDir.lerp(toTarget, ARROW_TURN_SPEED * dt);
+      newDir.normalize();
+      arrow.velocity.copy(newDir.multiplyScalar(ARROW_SPEED));
+
+      // Check hit
+      if (dist < 1.0) {
+        damageSlime(arrow.target, ARROW_DAMAGE, 1);
+        arrow.hasHit = true;
+
+        // Hit particles
+        spawnHitParticles(arrow.mesh.position, arrow.velocity.clone().normalize());
+        AudioSystem.playHit();
+        screenShakeIntensity = Math.max(screenShakeIntensity, 0.05);
+        hitStopTimer = 0.02;
+
+        // Try to find new target if this one dies
+        continue;
+      }
+    } else {
+      // Lost target or target dead - find new one
+      let newTarget = null;
+      let minDist = 30;
+      slimes.forEach(slime => {
+        if (!slime.userData.alive) return;
+        const d = arrow.mesh.position.distanceTo(slime.position);
+        if (d < minDist) {
+          minDist = d;
+          newTarget = slime;
+        }
+      });
+      arrow.target = newTarget;
+    }
+
+    // Move arrow
+    arrow.mesh.position.x += arrow.velocity.x * dt;
+    arrow.mesh.position.y += arrow.velocity.y * dt;
+    arrow.mesh.position.z += arrow.velocity.z * dt;
+
+    // Face direction of travel
+    const lookTarget = arrow.mesh.position.clone().add(arrow.velocity);
+    arrow.mesh.lookAt(lookTarget);
+  }
+
+  // Update arrow cooldown
+  arrowCooldown -= dt;
+}
+
+function updateGrandAbilities(dt) {
+  if (!isGrand) return;
+
+  if (playerGender === 'male') {
+    // === Grand Pope: Holy Thunder ===
+    holyThunderCooldown -= dt;
+    if (holyThunderCooldown <= 0) {
+      holyThunderCooldown = HOLY_THUNDER_COOLDOWN;
+
+      // Find a random alive slime within range
+      let target = null;
+      let candidates = [];
+      slimes.forEach(slime => {
+        if (!slime.userData.alive) return;
+        const dist = player.position.distanceTo(slime.position);
+        if (dist < HOLY_THUNDER_RANGE) {
+          candidates.push(slime);
+        }
+      });
+      if (candidates.length > 0) {
+        target = candidates[Math.floor(Math.random() * candidates.length)];
+
+        // Spawn holy thunder bolt from sky - massive
+        const boltGroup = new THREE.Group();
+
+        // Main bolt - very thick golden lightning
+        const boltGeo = new THREE.BoxGeometry(0.5, 20, 0.5);
+        const boltMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
+        const bolt = new THREE.Mesh(boltGeo, boltMat);
+        bolt.position.set(target.position.x, target.position.y + 10, target.position.z);
+        boltGroup.add(bolt);
+
+        // Outer glow - wide
+        const glowGeo = new THREE.BoxGeometry(1.5, 20, 1.5);
+        const glowMat = new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.35 });
+        const glow = new THREE.Mesh(glowGeo, glowMat);
+        glow.position.set(target.position.x, target.position.y + 10, target.position.z);
+        boltGroup.add(glow);
+
+        // Large impact flash on ground
+        const flashGeo = new THREE.BoxGeometry(8.0, 0.15, 8.0);
+        const flashMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 });
+        const flash = new THREE.Mesh(flashGeo, flashMat);
+        flash.position.set(target.position.x, target.position.y + 0.1, target.position.z);
+        boltGroup.add(flash);
+
+        // Secondary outer ring
+        const ringGeo = new THREE.BoxGeometry(12.0, 0.08, 12.0);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.3 });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.position.set(target.position.x, target.position.y + 0.05, target.position.z);
+        boltGroup.add(ring);
+
+        scene.add(boltGroup);
+        holyThunderBolts.push({ group: boltGroup, life: 0.2, maxLife: 0.2 });
+
+        // Damage target and nearby slimes (large AoE)
+        const aoeRange = 8;
+        slimes.forEach(slime => {
+          if (!slime.userData.alive) return;
+          const d = slime.position.distanceTo(target.position);
+          if (d < aoeRange) {
+            damageSlime(slime, HOLY_THUNDER_DAMAGE, 1);
+          }
+        });
+
+        screenShakeIntensity = Math.max(screenShakeIntensity, 0.06);
+      }
+    }
+
+    // Update existing thunder bolts (fade out)
+    for (let i = holyThunderBolts.length - 1; i >= 0; i--) {
+      const tb = holyThunderBolts[i];
+      tb.life -= dt;
+      const alpha = tb.life / tb.maxLife;
+      tb.group.children.forEach(child => {
+        child.material.opacity = child.material.opacity > 0.5 ? alpha * 0.9 : alpha * 0.4;
+      });
+      if (tb.life <= 0) {
+        scene.remove(tb.group);
+        holyThunderBolts.splice(i, 1);
+      }
+    }
+
+  } else {
+    // === Grand Saint Mother: 200 arrows in 360° circle ===
+    grandArrowCooldown -= dt;
+    if (grandArrowCooldown <= 0) {
+      grandArrowCooldown = GRAND_ARROW_COOLDOWN;
+
+      const arrowCount = GRAND_ARROW_COUNT;
+      // Find targets
+      const targets = [];
+      slimes.forEach(slime => {
+        if (!slime.userData.alive) return;
+        const dist = player.position.distanceTo(slime.position);
+        if (dist < 60) {
+          targets.push({ slime, dist });
+        }
+      });
+      targets.sort((a, b) => a.dist - b.dist);
+
+      for (let i = 0; i < arrowCount; i++) {
+        const angle = (i / arrowCount) * Math.PI * 2;
+        const dirX = Math.sin(angle);
+        const dirZ = Math.cos(angle);
+        const dir = new THREE.Vector3(dirX, 0.05, dirZ).normalize();
+
+        const arrowGroup = new THREE.Group();
+
+        // Shaft
+        const shaft = new THREE.Mesh(
+          new THREE.BoxGeometry(0.03, 0.03, 0.5),
+          new THREE.MeshLambertMaterial({ color: 0xddeeff })
+        );
+        arrowGroup.add(shaft);
+
+        // Arrowhead (holy white)
+        const arrowHead = new THREE.Mesh(
+          new THREE.BoxGeometry(0.06, 0.06, 0.12),
+          new THREE.MeshBasicMaterial({ color: 0xffffff })
+        );
+        arrowHead.position.z = 0.3;
+        arrowGroup.add(arrowHead);
+
+        // Divine glow trail
+        const glow = new THREE.Mesh(
+          new THREE.BoxGeometry(0.05, 0.05, 0.4),
+          new THREE.MeshBasicMaterial({ color: 0x88ccff, transparent: true, opacity: 0.5 })
+        );
+        glow.position.z = -0.2;
+        arrowGroup.add(glow);
+
+        const spawnPos = player.position.clone();
+        spawnPos.y += 1.5;
+        arrowGroup.position.copy(spawnPos);
+        arrowGroup.lookAt(spawnPos.x + dir.x, spawnPos.y + dir.y, spawnPos.z + dir.z);
+
+        // Assign target
+        const target = i < targets.length ? targets[i].slime :
+          (targets.length > 0 ? targets[i % targets.length].slime : null);
+
+        scene.add(arrowGroup);
+        arrowList.push({
+          mesh: arrowGroup,
+          velocity: new THREE.Vector3(dir.x * ARROW_SPEED, dir.y * ARROW_SPEED, dir.z * ARROW_SPEED),
+          target: target,
+          life: 2.5,
+          hasHit: false
+        });
+      }
+      AudioSystem.playSlash1();
+      screenShakeIntensity = Math.max(screenShakeIntensity, 0.1);
+    }
+  }
+
+  // Also keep meteor updates running for existing meteors
+  for (let i = meteorList.length - 1; i >= 0; i--) {
+    const meteor = meteorList[i];
+    meteor.life -= dt;
+    if (meteor.isParticle) {
+      meteor.mesh.position.x += meteor.velX * dt;
+      meteor.mesh.position.y += (meteor.velY || 0) * dt;
+      meteor.mesh.position.z += meteor.velZ * dt;
+      if (meteor.velY !== undefined) meteor.velY -= 20 * dt;
+      meteor.mesh.material.opacity = meteor.life / meteor.maxLife;
+      if (meteor.life <= 0) { scene.remove(meteor.mesh); meteorList.splice(i, 1); }
+      continue;
+    }
+    if (meteor.life <= 0) { scene.remove(meteor.mesh); meteorList.splice(i, 1); }
+  }
+}
+
+function updateSageAbilities(dt) {
+  if (!isSage || isGrand) return;
+
+  if (playerGender === 'female') {
+    // === Female sage: auto fan-arrow barrage (same style as shootArrow but 20 arrows, auto-aimed) ===
+    sageAutoArrowCooldown -= dt;
+    if (sageAutoArrowCooldown <= 0) {
+      sageAutoArrowCooldown = SAGE_AUTO_ARROW_COOLDOWN;
+
+      const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.quaternion);
+
+      // Find nearby slimes for targeting
+      const targets = [];
+      slimes.forEach(slime => {
+        if (!slime.userData.alive) return;
+        const dist = player.position.distanceTo(slime.position);
+        if (dist < 50) {
+          targets.push({ slime, dist });
+        }
+      });
+      targets.sort((a, b) => a.dist - b.dist);
+
+      // 20 arrows in fan pattern spread across ~120 degrees
+      const arrowCount = SAGE_ARROW_COUNT;
+      const totalSpread = 2.0; // radians (~115 degrees total)
+      for (let i = 0; i < arrowCount; i++) {
+        const angle = -totalSpread / 2 + (i / (arrowCount - 1)) * totalSpread;
+
+        const arrowGroup = new THREE.Group();
+
+        // Shaft
+        const shaft = new THREE.Mesh(
+          new THREE.BoxGeometry(0.03, 0.03, 0.5),
+          new THREE.MeshLambertMaterial({ color: 0x8B6914 })
+        );
+        arrowGroup.add(shaft);
+
+        // Arrowhead
+        const arrowHead = new THREE.Mesh(
+          new THREE.BoxGeometry(0.06, 0.06, 0.12),
+          new THREE.MeshPhongMaterial({ color: 0xcccccc, shininess: 80 })
+        );
+        arrowHead.position.z = 0.3;
+        arrowGroup.add(arrowHead);
+
+        // Fletching
+        const fletchMat = new THREE.MeshLambertMaterial({ color: 0x00ccff });
+        const fletch1 = new THREE.Mesh(
+          new THREE.BoxGeometry(0.08, 0.01, 0.1), fletchMat
+        );
+        fletch1.position.z = -0.2;
+        arrowGroup.add(fletch1);
+        const fletch2 = new THREE.Mesh(
+          new THREE.BoxGeometry(0.08, 0.01, 0.1), fletchMat
+        );
+        fletch2.position.z = -0.2;
+        fletch2.rotation.z = Math.PI / 2;
+        arrowGroup.add(fletch2);
+
+        // Sage cyan glow trail
+        const glow = new THREE.Mesh(
+          new THREE.BoxGeometry(0.04, 0.04, 0.3),
+          new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5 })
+        );
+        glow.position.z = -0.3;
+        arrowGroup.add(glow);
+
+        // Position at player
+        const spawnPos = player.position.clone();
+        spawnPos.y += 1.5;
+        spawnPos.add(forward.clone().multiplyScalar(0.5));
+        arrowGroup.position.copy(spawnPos);
+
+        // Fan direction: rotate forward vector by angle around Y axis
+        const dir = forward.clone();
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        const newX = dir.x * cos - dir.z * sin;
+        const newZ = dir.x * sin + dir.z * cos;
+        dir.x = newX;
+        dir.z = newZ;
+        dir.y = 0.05;
+        dir.normalize();
+
+        arrowGroup.lookAt(spawnPos.x + dir.x, spawnPos.y + dir.y, spawnPos.z + dir.z);
+
+        // Assign target: each arrow targets a different slime if available
+        const target = i < targets.length ? targets[i].slime : (targets.length > 0 ? targets[i % targets.length].slime : null);
+
+        scene.add(arrowGroup);
+        arrowList.push({
+          mesh: arrowGroup,
+          velocity: dir.multiplyScalar(ARROW_SPEED),
+          target: target,
+          life: ARROW_LIFETIME,
+          hasHit: false
+        });
+      }
+      AudioSystem.playSlash1();
+      screenShakeIntensity = Math.max(screenShakeIntensity, 0.08);
+    }
+  } else {
+    // === Male sage: lightning orbs + meteors ===
+    // === Update orbiting lightning orbs ===
+    lightningOrbAngle += dt * 5.0; // faster rotation speed
+    const orbitRadius = 2.5;
+    const orbitHeight = 1.5;
+
+    lightningOrbs.forEach((orb, idx) => {
+      const angle = lightningOrbAngle + orb.angleOffset;
+      const orbX = player.position.x + Math.cos(angle) * orbitRadius;
+      const orbZ = player.position.z + Math.sin(angle) * orbitRadius;
+      const orbY = player.position.y + orbitHeight + Math.sin(angle * 2 + idx) * 0.3;
+      orb.mesh.position.set(orbX, orbY, orbZ);
+
+      // Rotate the orb itself
+      orb.mesh.rotation.y += dt * 3;
+      orb.mesh.rotation.x += dt * 2;
+
+      // Pulse the glow
+      if (orb.mesh.children[1]) {
+        orb.mesh.children[1].material.opacity = 0.3 + Math.sin(clock.elapsedTime * 4 + idx) * 0.15;
+      }
+
+      // Randomize spark rotations for electric effect
+      orb.mesh.children.forEach((child, ci) => {
+        if (ci >= 2) { // sparks start at index 2
+          child.rotation.x += dt * 15;
+          child.rotation.z += dt * 10;
+          child.position.set(
+            (Math.random() - 0.5) * 0.25,
+            (Math.random() - 0.5) * 0.25,
+            (Math.random() - 0.5) * 0.25
+          );
+        }
+      });
+
+      // Lightning orb attacks nearby slimes
+      orb.attackTimer -= dt;
+      if (orb.attackTimer <= 0) {
+        // Find nearest slime to this orb
+        let nearest = null;
+        let nearDist = 5; // attack range
+        slimes.forEach(slime => {
+          if (!slime.userData.alive) return;
+          const d = orb.mesh.position.distanceTo(slime.position);
+          if (d < nearDist) {
+            nearDist = d;
+            nearest = slime;
+          }
+        });
+
+        if (nearest) {
+          // Create lightning bolt visual from orb to slime
+          spawnLightningBolt(orb.mesh.position.clone(), nearest.position.clone());
+
+          const toSlime = new THREE.Vector3().subVectors(nearest.position, player.position).normalize();
+          damageSlime(nearest, LIGHTNING_ORB_DAMAGE, 1);
+          screenShakeIntensity = Math.max(screenShakeIntensity, 0.03);
+          orb.attackTimer = LIGHTNING_ATTACK_COOLDOWN;
+        }
+      }
+    });
+
+    // === Auto meteor rain ===
+    meteorCooldown -= dt;
+    if (meteorCooldown <= 0) {
+      spawnMeteor();
+      meteorCooldown = METEOR_COOLDOWN;
+    }
+  }
+
+  // Update existing meteors
+  for (let i = meteorList.length - 1; i >= 0; i--) {
+    const meteor = meteorList[i];
+    meteor.life -= dt;
+
+    // For impact particles
+    if (meteor.isParticle) {
+      meteor.mesh.position.x += meteor.velX * dt;
+      meteor.mesh.position.y += (meteor.velY || 0) * dt;
+      meteor.mesh.position.z += meteor.velZ * dt;
+      if (meteor.velY !== undefined) meteor.velY -= 20 * dt; // gravity
+      meteor.mesh.material.opacity = meteor.life / meteor.maxLife;
+      meteor.mesh.rotation.x += dt * 5;
+      if (meteor.life <= 0) {
+        scene.remove(meteor.mesh);
+        meteorList.splice(i, 1);
+      }
+      continue;
+    }
+
+    // Fall from sky
+    meteor.mesh.position.y -= 30 * dt; // fast fall
+    meteor.mesh.position.x += meteor.velX * dt;
+    meteor.mesh.position.z += meteor.velZ * dt;
+
+    // Rotate
+    meteor.mesh.rotation.x += dt * 5;
+    meteor.mesh.rotation.z += dt * 3;
+
+    // Scale fire trail
+    if (meteor.mesh.children[1]) {
+      meteor.mesh.children[1].scale.y = 1 + (1 - meteor.life / meteor.maxLife) * 2;
+    }
+
+    // Check if hit ground level
+    const groundY = getTerrainHeight(meteor.mesh.position.x, meteor.mesh.position.z);
+    if (meteor.mesh.position.y <= groundY + 0.5) {
+      // Impact! Damage nearby slimes in AoE
+      meteorImpact(meteor.mesh.position.clone());
+      scene.remove(meteor.mesh);
+      meteorList.splice(i, 1);
+      continue;
+    }
+
+    if (meteor.life <= 0) {
+      scene.remove(meteor.mesh);
+      meteorList.splice(i, 1);
+    }
+  }
+}
+
+function spawnMeteor() {
+  // Target a cluster of slimes near the player
+  let targetX = player.position.x + (Math.random() - 0.5) * 20;
+  let targetZ = player.position.z + (Math.random() - 0.5) * 20;
+
+  // Try to target where slimes are
+  let bestTarget = null;
+  let bestCount = 0;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const tx = player.position.x + (Math.random() - 0.5) * 25;
+    const tz = player.position.z + (Math.random() - 0.5) * 25;
+    let count = 0;
+    slimes.forEach(s => {
+      if (s.userData.alive && Math.hypot(s.position.x - tx, s.position.z - tz) < 5) count++;
+    });
+    if (count > bestCount) {
+      bestCount = count;
+      targetX = tx;
+      targetZ = tz;
+    }
+  }
+
+  const meteorGroup = new THREE.Group();
+
+  // Meteor rock (blocky)
+  const rockGeo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+  const rockMat = new THREE.MeshLambertMaterial({ color: 0x553322 });
+  const rock = new THREE.Mesh(rockGeo, rockMat);
+  rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+  meteorGroup.add(rock);
+
+  // Fire glow
+  const fireGeo = new THREE.BoxGeometry(0.5, 0.8, 0.5);
+  const fireMat = new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.6 });
+  const fire = new THREE.Mesh(fireGeo, fireMat);
+  fire.position.y = 0.5;
+  meteorGroup.add(fire);
+
+  // Bright core
+  const coreGeo = new THREE.BoxGeometry(0.35, 0.35, 0.35);
+  const coreMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+  const core = new THREE.Mesh(coreGeo, coreMat);
+  meteorGroup.add(core);
+
+  // Start high above target
+  const spawnY = 35 + Math.random() * 10;
+  meteorGroup.position.set(
+    targetX + (Math.random() - 0.5) * 3,
+    spawnY,
+    targetZ + (Math.random() - 0.5) * 3
+  );
+
+  scene.add(meteorGroup);
+  meteorList.push({
+    mesh: meteorGroup,
+    targetX: targetX,
+    targetZ: targetZ,
+    velX: (targetX - meteorGroup.position.x) * 0.5,
+    velZ: (targetZ - meteorGroup.position.z) * 0.5,
+    life: 3.0,
+    maxLife: 3.0
+  });
+}
+
+function meteorImpact(pos) {
+  // AoE damage to all slimes within radius
+  const impactRadius = 5;
+  slimes.forEach(slime => {
+    if (!slime.userData.alive) return;
+    const dist = pos.distanceTo(slime.position);
+    if (dist < impactRadius) {
+      const toSlime = new THREE.Vector3().subVectors(slime.position, pos).normalize();
+      damageSlime(slime, METEOR_DAMAGE, 3); // heavy damage like combo 3
+    }
+  });
+
+  // Visual impact - particles
+  for (let i = 0; i < 12; i++) {
+    const pGeo = new THREE.BoxGeometry(0.15, 0.15, 0.15);
+    const pMat = new THREE.MeshBasicMaterial({
+      color: Math.random() > 0.5 ? 0xff6600 : 0xffaa00,
+      transparent: true, opacity: 1
+    });
+    const p = new THREE.Mesh(pGeo, pMat);
+    p.position.copy(pos);
+    p.userData.vel = new THREE.Vector3(
+      (Math.random() - 0.5) * 15,
+      Math.random() * 10 + 5,
+      (Math.random() - 0.5) * 15
+    );
+    p.userData.life = 0.8;
+    scene.add(p);
+    meteorList.push({ mesh: p, life: 0.8, maxLife: 0.8, isParticle: true,
+      velX: p.userData.vel.x, velZ: p.userData.vel.z, velY: p.userData.vel.y });
+  }
+
+  screenShakeIntensity = Math.max(screenShakeIntensity, 0.2);
+  hitStopTimer = Math.max(hitStopTimer, 0.05);
+  AudioSystem.playSlash3(); // reuse heavy impact sound
+}
+
+function spawnLightningBolt(from, to) {
+  // Simple blocky lightning bolt visual
+  const boltGroup = new THREE.Group();
+  const dir = new THREE.Vector3().subVectors(to, from);
+  const dist = dir.length();
+  const segments = Math.max(3, Math.floor(dist * 2));
+
+  const boltMat = new THREE.MeshBasicMaterial({ color: 0xffff88, transparent: true, opacity: 0.9 });
+  const boltMat2 = new THREE.MeshBasicMaterial({ color: 0x8888ff, transparent: true, opacity: 0.5 });
+
+  let prevPos = from.clone();
+  for (let i = 1; i <= segments; i++) {
+    const t = i / segments;
+    const nextPos = from.clone().lerp(to, t);
+    // Add random offset for zigzag (except last segment)
+    if (i < segments) {
+      nextPos.x += (Math.random() - 0.5) * 0.5;
+      nextPos.y += (Math.random() - 0.5) * 0.3;
+      nextPos.z += (Math.random() - 0.5) * 0.5;
+    }
+
+    const segDir = new THREE.Vector3().subVectors(nextPos, prevPos);
+    const segLen = segDir.length();
+    const segGeo = new THREE.BoxGeometry(0.05, segLen, 0.05);
+    const seg = new THREE.Mesh(segGeo, boltMat);
+
+    const midPoint = prevPos.clone().add(nextPos).multiplyScalar(0.5);
+    seg.position.copy(midPoint);
+    seg.lookAt(nextPos);
+    seg.rotateX(Math.PI / 2);
+    boltGroup.add(seg);
+
+    // Glow
+    const glowGeo = new THREE.BoxGeometry(0.12, segLen, 0.12);
+    const glowSeg = new THREE.Mesh(glowGeo, boltMat2);
+    glowSeg.position.copy(midPoint);
+    glowSeg.lookAt(nextPos);
+    glowSeg.rotateX(Math.PI / 2);
+    boltGroup.add(glowSeg);
+
+    prevPos = nextPos;
+  }
+
+  scene.add(boltGroup);
+
+  // Remove after short time
+  setTimeout(() => {
+    scene.remove(boltGroup);
+  }, 150);
+}
+
+function respawnSlime(slime) {
+  let nx, nz;
+  do {
+    nx = (Math.random() - 0.5) * 140;
+    nz = (Math.random() - 0.5) * 140;
+  } while (Math.hypot(nx - player.position.x, nz - player.position.z) < 15);
+
+  const ny = getTerrainHeight(nx, nz);
+  slime.position.set(nx, ny, nz);
+  slime.scale.set(1, 1, 1);
+  slime.userData.hp = slime.userData.maxHp;
+  slime.userData.alive = true;
+  slime.userData.hitFlash = 0;
+  slime.userData.deathTimer = 0;
+  slime.userData.bouncePhase = Math.random() * Math.PI * 2;
+  slime.userData.patrolCenter.set(nx, ny, nz);
+  slime.userData.patrolAngle = Math.random() * Math.PI * 2;
+  slime.userData.state = 'patrol';
+  slime.children[0].material.emissive.setHex(0x331122);
+}
+
+function buildSpatialHash() {
+  spatialHash = {};
+  slimes.forEach(slime => {
+    if (!slime.userData.alive) return;
+    const cellX = Math.floor(slime.position.x / SPATIAL_HASH_CELL_SIZE);
+    const cellZ = Math.floor(slime.position.z / SPATIAL_HASH_CELL_SIZE);
+    const key = cellX + ',' + cellZ;
+    if (!spatialHash[key]) spatialHash[key] = [];
+    spatialHash[key].push(slime);
+  });
+}
+
+function getNeighboringSlimes(slime) {
+  const cellX = Math.floor(slime.position.x / SPATIAL_HASH_CELL_SIZE);
+  const cellZ = Math.floor(slime.position.z / SPATIAL_HASH_CELL_SIZE);
+  const neighbors = [];
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dz = -1; dz <= 1; dz++) {
+      const key = (cellX + dx) + ',' + (cellZ + dz);
+      if (spatialHash[key]) {
+        neighbors.push(...spatialHash[key]);
+      }
+    }
+  }
+  return neighbors;
+}
+
+function updateSlimes(dt) {
+  // Rebuild spatial hash every frame
+  buildSpatialHash();
+
+  slimes.forEach(slime => {
+    if (!slime.userData.alive) {
+      if (slime.userData.deathTimer > 0) {
+        slime.userData.deathTimer -= dt;
+        const scale = Math.max(0, slime.userData.deathTimer / 1.0);
+        slime.scale.set(scale, scale, scale);
+        slime.position.y += dt * 2;
+      } else {
+        respawnSlime(slime);
+      }
+      return;
+    }
+
+    // Apply knockback
+    if (slime.userData.knockbackVel.length() > 0.01) {
+      slime.position.x += slime.userData.knockbackVel.x * dt;
+      slime.position.z += slime.userData.knockbackVel.z * dt;
+      slime.userData.knockbackVel.multiplyScalar(0.85);  // friction
+    }
+
+    // Hit flash
+    if (slime.userData.hitFlash > 0) {
+      slime.userData.hitFlash -= dt;
+      slime.children[0].material.emissive.setHex(0xffffff);
+    } else {
+      slime.children[0].material.emissive.setHex(0x331122);
+    }
+
+    // Bounce
+    slime.userData.bouncePhase += dt * 3;
+    const bounce = Math.abs(Math.sin(slime.userData.bouncePhase)) * 0.3;
+    const squash = 1 - Math.abs(Math.sin(slime.userData.bouncePhase)) * 0.15;
+    slime.children[0].scale.y = squash;
+    slime.children[0].scale.x = 1 + (1 - squash) * 0.5;
+    slime.children[0].scale.z = 1 + (1 - squash) * 0.5;
+
+    // AI - all slimes actively chase the player
+    const distToPlayer = slime.position.distanceTo(player.position);
+    slime.userData.state = 'chase';
+
+    // Player collision
+    const collisionDist = 1.0;
+    if (distToPlayer < collisionDist && distToPlayer > 0.01) {
+      const pushDir = new THREE.Vector3().subVectors(slime.position, player.position).normalize();
+      const overlap = collisionDist - distToPlayer;
+      slime.position.x += pushDir.x * overlap * 0.6;
+      slime.position.z += pushDir.z * overlap * 0.6;
+      player.position.x -= pushDir.x * overlap * 0.4;
+      player.position.z -= pushDir.z * overlap * 0.4;
+    }
+
+    // Slime-to-slime collision avoidance using spatial hash
+    const neighbors = getNeighboringSlimes(slime);
+    neighbors.forEach(other => {
+      if (other === slime) return;
+      const dist = slime.position.distanceTo(other.position);
+      const minDist = 0.8;
+      if (dist < minDist && dist > 0.01) {
+        const pushDir = new THREE.Vector3().subVectors(slime.position, other.position).normalize();
+        const separation = (minDist - dist) * 0.5;
+        slime.position.x += pushDir.x * separation;
+        slime.position.z += pushDir.z * separation;
+      }
+    });
+
+    if (slime.userData.state === 'chase') {
+      const dir = new THREE.Vector3().subVectors(player.position, slime.position).normalize();
+      if (distToPlayer > collisionDist * 0.9) {
+        slime.position.x += dir.x * slime.userData.speed * dt;
+        slime.position.z += dir.z * slime.userData.speed * dt;
+      }
+      slime.lookAt(player.position.x, slime.position.y, player.position.z);
+
+      // Damage player
+      if (distToPlayer < collisionDist && playerInvincible <= 0) {
+        const dmg = isBlocking ? 1 : 3;
+        playerHP = Math.max(0, playerHP - dmg);
+        playerInvincible = 0.5;
+        updateHPBar();
+        showDamageFlash();
+      }
+    } else {
+      slime.userData.patrolAngle += dt * 0.5;
+      const targetX = slime.userData.patrolCenter.x + Math.cos(slime.userData.patrolAngle) * slime.userData.patrolRadius;
+      const targetZ = slime.userData.patrolCenter.z + Math.sin(slime.userData.patrolAngle) * slime.userData.patrolRadius;
+      const dir = new THREE.Vector3(targetX - slime.position.x, 0, targetZ - slime.position.z).normalize();
+      slime.position.x += dir.x * slime.userData.speed * 0.3 * dt;
+      slime.position.z += dir.z * slime.userData.speed * 0.3 * dt;
+      slime.lookAt(slime.position.x + dir.x, slime.position.y, slime.position.z + dir.z);
+    }
+
+    // Update Y position
+    slime.position.y = getTerrainHeight(slime.position.x, slime.position.z) + bounce;
+
+    // HP bar update
+    const hpPercent = slime.userData.hp / slime.userData.maxHp;
+    if (slime.userData.hpBar) {
+      slime.userData.hpBar.scale.x = hpPercent;
+      slime.userData.hpBar.position.x = -(1 - hpPercent) * 0.5;
+      slime.userData.hpGroup.lookAt(camera.position);
+    }
+  });
+}
+
+function updateCamera() {
+  if (!gameStarted) return;
+  const camX = player.position.x + Math.sin(cameraAngleX) * cameraDist * Math.cos(cameraAngleY);
+  const camY = player.position.y + 2 + Math.sin(cameraAngleY) * cameraDist;
+  const camZ = player.position.z + Math.cos(cameraAngleX) * cameraDist * Math.cos(cameraAngleY);
+
+  camera.position.set(camX, camY, camZ);
+  camera.lookAt(player.position.x, player.position.y + 1.5, player.position.z);
+}
+
+// ============ UI ============
+function updateHPBar() {
+  const percent = (playerHP / maxHP) * 100;
+  document.getElementById('hpFill').style.width = percent + '%';
+  document.getElementById('hpText').textContent = `HP ${playerHP}/${maxHP}`;
+
+  if (percent > 50) {
+    document.getElementById('hpFill').style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
+  } else if (percent > 25) {
+    document.getElementById('hpFill').style.background = 'linear-gradient(90deg, #f39c12, #e67e22)';
+  } else {
+    document.getElementById('hpFill').style.background = 'linear-gradient(90deg, #e74c3c, #c0392b)';
+  }
+}
+
+function updateSlimeCounter() {
+  document.getElementById('slimeCounter').textContent = `Defeated: ${slimesDefeated}`;
+}
+
+function showDamageFlash() {
+  const flash = document.getElementById('damageFlash');
+  flash.style.display = 'block';
+  AudioSystem.playDamage();
+  setTimeout(() => { flash.style.display = 'none'; }, 150);
+}
+
+function showKOFlash() {
+  // Update the HUD total always
+  const totalEl = document.getElementById('koTotal');
+  totalEl.textContent = `KO: ${slimesDefeated}`;
+
+  // Only show big center number every 100 kills
+  if (slimesDefeated % 100 === 0) {
+    const koEl = document.getElementById('koCounter');
+    koEl.textContent = slimesDefeated;
+    koEl.style.display = 'block';
+    koEl.style.animation = 'none';
+    setTimeout(() => {
+      koEl.style.animation = 'koFlash 0.6s ease-out';
+    }, 10);
+    setTimeout(() => {
+      koEl.style.display = 'none';
+    }, 600);
+
+    // Flash the total too
+    totalEl.style.animation = 'none';
+    setTimeout(() => {
+      totalEl.style.animation = 'koFlash 0.8s ease-out';
+    }, 10);
+  }
+}
+
+function updateComboDisplay() {
+  const comboEl = document.getElementById('comboDisplay');
+  if (comboCounter > 0) {
+    comboEl.textContent = comboCounter + ' COMBO!';
+    comboEl.style.display = 'block';
+
+    // Determine color based on combo count
+    let className = 'combo-1-9';
+    if (comboCounter >= 100) {
+      className = 'combo-100-plus';
+    } else if (comboCounter >= 50) {
+      className = 'combo-50-99';
+    } else if (comboCounter >= 30) {
+      className = 'combo-30-49';
+    } else if (comboCounter >= 10) {
+      className = 'combo-10-29';
+    }
+    comboEl.className = className;
+
+    // Animation
+    comboEl.style.animation = 'none';
+    setTimeout(() => {
+      comboEl.style.animation = 'comboBounce 0.4s ease-out, comboFadeOut 1.2s ease-out 0.5s forwards';
+    }, 10);
+  } else {
+    comboEl.style.display = 'none';
+  }
+}
+
+// ============ MAIN LOOP ============
+function animate() {
+  requestAnimationFrame(animate);
+  let dt = Math.min(clock.getDelta(), 0.05);
+
+  if (gameStarted) {
+    // Handle hit stop (freeze frame on impact)
+    let actualDt = dt;
+    if (hitStopTimer > 0) {
+      hitStopTimer -= dt;
+      // Only particles and UI update during hit stop, not physics
+      actualDt = 0;
+    }
+
+    updatePlayer(actualDt);
+    updateSlimes(actualDt);
+    updateSwordQi(actualDt);
+    updateArrows(actualDt);
+    updateSageAbilities(actualDt);
+    updateGrandAbilities(actualDt);
+
+    // Always update particles and combo
+    updateParticles(dt);
+
+    // Update combo reset timer
+    if (comboCounter > 0) {
+      comboResetTimer -= dt;
+      if (comboResetTimer <= 0) {
+        comboCounter = 0;
+      }
+      updateComboDisplay();
+    }
+
+    // Apply screen shake
+    if (screenShakeIntensity > 0) {
+      const shake = screenShakeIntensity * (Math.random() - 0.5);
+      camera.position.x += shake * 0.3;
+      camera.position.y += shake * 0.3;
+      camera.position.z += shake * 0.3;
+      screenShakeIntensity *= 0.92;
+      if (screenShakeIntensity < 0.01) screenShakeIntensity = 0;
+    }
+
+    updateCamera();
+  }
+
+  renderer.render(scene, camera);
+
+  // Update performance stats
+  perfFrameCount++;
+  const now = performance.now();
+  if (now - perfLastTime >= 1000) {
+    perfFPS = perfFrameCount;
+    perfFrameCount = 0;
+    perfLastTime = now;
+  }
+  if (gameStarted) {
+    const info = renderer.info;
+    const statsEl = document.getElementById('perfStats');
+    statsEl.style.display = 'block';
+    statsEl.innerHTML =
+      `<span style="color:#ff0">FPS:</span> ${perfFPS}<br>` +
+      `<span style="color:#ff0">Draw Calls:</span> ${info.render.calls}<br>` +
+      `<span style="color:#ff0">Triangles:</span> ${info.render.triangles.toLocaleString()}<br>` +
+      `<span style="color:#ff0">Geometries:</span> ${info.memory.geometries}<br>` +
+      `<span style="color:#ff0">Textures:</span> ${info.memory.textures}<br>` +
+      `<span style="color:#ff0">Objects:</span> ${scene.children.length}<br>` +
+      `<span style="color:#ff0">Slimes:</span> ${slimes.filter(s => s.userData.alive).length} / ${slimes.length}<br>` +
+      `<span style="color:#ff0">Arrows:</span> ${arrowList.length}`;
+  } else {
+    document.getElementById('perfStats').style.display = 'none';
+  }
+}
+
+let perfFPS = 0, perfFrameCount = 0, perfLastTime = performance.now();
+
+// Start
+init();
+</script>
+</body>
+</html>
